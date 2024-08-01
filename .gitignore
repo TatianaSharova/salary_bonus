@@ -22,4 +22,7 @@ __pycache__
 /.vscode
 
 # db
-bot_base.db
+db.db
+
+# google
+google-api.json
