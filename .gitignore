@@ -12,17 +12,16 @@ venv/
 ENV/
 env.bak/
 venv.bak/
+
 # test files
 test/
 
-# pycache
-__pycache__
 
 # debug
 /.vscode
 
 # db
-db.db
+*.db
 
 # google
-google-api.json
+creds.json
