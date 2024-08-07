@@ -15,6 +15,7 @@ venv.bak/
 
 # test files
 test/
+test.py
 
 
 # debug
