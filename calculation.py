@@ -105,11 +105,12 @@ def check_amount_directions(comp, row):
             for point_amount in complexity[i]:
                 if amount <= point_amount[1]:
                     return point_amount[0]
-            return None                                     #TODO расчет, если направлений больше
+            return round((amount/(8.5-comp) + comp/2),1)                              #TODO расчет, если направлений больше
 
 
 def check_square(row):
     square = int(row['Площадь защищаемых помещений (м^2)'])
+
 
 
 
