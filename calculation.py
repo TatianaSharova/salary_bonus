@@ -80,13 +80,13 @@ def check_filled_projects(row) -> bool:
        'Количество направлений', 'Площадь защищаемых помещений (м^2)']
     if 'блок-контейнер' in row['Тип объекта'].strip().lower():                                #TODO надо ли это?
         return True
-    for property in characteristics:
-        if row[f'{property}'] == '':
+    for char in characteristics:
+        if row[f'{char}'] == '' or row[f'{char}'] == None:
             return False
     return True
 
 
-def check_amount_directions(comp, row):
+def check_amount_directions(comp, amount):
     '''
     Расчитывает баллы за количество направлений
     в зависимости от сложности объекта.
@@ -98,7 +98,10 @@ def check_amount_directions(comp, row):
         4 : [(2,2),(2.5,4),(3,8),(4,12),(5,20)],
         5 : [(4,6),(5,8),(6,12),(8,20)]
     }
-    amount = int(row['Количество направлений'])
+    try:
+        amount = int(amount)
+    except ValueError:
+        return 0
 
     for i in range(1,6):
         if comp == i:
@@ -108,10 +111,84 @@ def check_amount_directions(comp, row):
             return round((amount/(8.5-comp) + comp/2),1)                              #TODO расчет, если направлений больше
 
 
-def check_square(row):
+def check_square(comp, row):
+    '''Расчитывает баллы в зависимости от площади
+    защищаемого помещения, сложности объекта и проделанной работы.'''
+    count = 0
+    print(row['Шифр (ИСП)'])
     square = int(row['Площадь защищаемых помещений (м^2)'])
 
+    ps = row['ПС'] == 'Есть'
+    os = row['ОС'] == 'Есть'
+    soue = row['СОУЭ'] == 'Есть'
+    asv = row['Автоматизация систем вентиляции'] == 'Есть'
+    characteristics = [ps,os,soue,asv]
 
+    complexity = {
+        1 : [(0,10000)],
+        2 : [(2,400),(2.5,1000),(3,3000),(3.5,10000),(5,100000)],
+        3 : [(2,400),(3,1000),(3.5,3000),(4,10000),(8,100000)],
+        4 : [(3,400),(4,1000),(4.5,3000),(5,10000),(10,100000)],
+        5 : [(4,400),(4.5,1000),(5,3000),(5.5,10000),(12,100000)]
+    }
+
+    for i in range(1,6):
+        if comp == i:
+            for point_square in complexity[i]:
+                if square <= point_square[1]:
+                    points = point_square[0]
+                    break                                                   #TODO
+    for char in characteristics:
+        if char == True:
+            count += points
+    return count
+
+
+def check_stm_skud(row):
+    '''Расчитывает баллы в зависимости от характеристик.'''
+    points = 0
+    try:
+        stm = int(row['СТМ (количество камер)'])
+    except ValueError:
+        stm = 0
+    try:
+        skud = int(row['СКУД (количество точек доступа)'])
+    except ValueError:
+        skud = 0
+    characteristics = [stm, skud]
+    
+    for char in characteristics:
+        if char > 0:
+            if char <= 10:
+                points += 1
+            elif char <= 20 :
+                points += 1.5
+            else:
+                points += 2
+    return points
+
+
+def check_cultural_heritage(row):
+    if row['Объект культурного наследия'] == 'Да':
+        return 3
+    else:
+        return 0
+
+
+def check_net(row):
+    if row['Сети'] == 'Есть':
+        return 1.5
+    else:
+        return 0
+
+
+def check_authors(authors):
+    authors = authors.strip()
+    if ',' in authors:
+        authors = authors.split(',')
+        return(len(authors))
+    else:
+        return 1
 
 
 def count_points(row):
@@ -119,29 +196,31 @@ def count_points(row):
     filled_project = check_filled_projects(row)
     if not filled_project:
         return 'Необходимо заполнить данные для расчёта'
+    if 'блок-контейнер' in row['Тип объекта'].strip().lower():                                #TODO надо ли это?
+        return 1
     
     complexity = set_project_complexity(row)
-    points += check_amount_directions(complexity, row)
-    points += check_square(row)
+    points += check_amount_directions(complexity, row['Количество направлений'])
+    points += check_amount_directions(complexity, row['Другие АПТ (количество направлений)'])
+    points += check_square(complexity, row)
+    points += check_stm_skud(row)
+    points += check_cultural_heritage(row)
+    points += check_net(row)
+    points = round(points/check_authors(row['Разработал']),1)
+    return points
 
-    
-
-        
 
 def func(engineers: list, df: DataFrame):
     for engineer in engineers:
-        engineer_projects = df[df['Разработал'].str.match(f'{engineer}')]
+        print(engineer)
+        engineer_projects = df[df['Разработал'].str.contains(f'{engineer}')]
         engineer_projects["Баллы"] = engineer_projects.apply(count_points, axis=1)
         print(engineer_projects)
 
 
 
-
-
-
-
 # Сортировка по имени инженера
-Kulikov = df[df['Разработал'].str.match('Куликов')]
+Kulikov = df[df['Разработал'].str.contains('Куликов')]
 
 if __name__ == "__main__":
     a = get_list_of_engineers(df)
