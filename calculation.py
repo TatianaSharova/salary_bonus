@@ -210,12 +210,46 @@ def count_points(row):
     return points
 
 
+def send_data_to_spreadsheet(df: DataFrame, engineer: str):
+    try:
+        sheet = gc.open("Премирование").worksheet(f'{engineer}')
+    except gspread.exceptions.SpreadsheetNotFound:
+        pass                                                                 #TODO создание таблицы, если она не находится
+    except gspread.exceptions.WorksheetNotFound:
+        sh = gc.open("Премирование")
+        sheet = sh.add_worksheet(title=f'{engineer}', rows=200, cols=20)
+    
+    sheet.clear()
+    
+    eng_small = df[['Страна', 'Наименование объекта', 'Шифр (ИСП)', 'Шифр (сторонней организации)', 'Разработал', 'Баллы']]
+    print(eng_small)
+    
+    sheet.update([eng_small.columns.values.tolist()] + eng_small.values.tolist())
+    sheet.format("A1:F1", {
+    "backgroundColor": {
+      "red": 0.7,
+      "green": 1.0,
+      "blue": 0.7
+    },
+    "wrapStrategy": 'WRAP',
+    "horizontalAlignment": "CENTER",
+    "textFormat": {
+      "bold": True
+    }
+})
+                                                                       
+
+
+
+
+
 def func(engineers: list, df: DataFrame):
     for engineer in engineers:
         print(engineer)
         engineer_projects = df[df['Разработал'].str.contains(f'{engineer}')]
         engineer_projects["Баллы"] = engineer_projects.apply(count_points, axis=1)
-        print(engineer_projects)
+        send_data_to_spreadsheet(engineer_projects, engineer)
+        #print(engineer_projects)
 
 
 
