@@ -4,8 +4,8 @@ import pandas as pd
 from pandas.core.frame import DataFrame
 pd.options.mode.chained_assignment = None
 
-lis = ['Наименование объекта', 'Шифр (ИСП)', 'Тип объекта', 'Тип защищаемых помещений',
-       'Количество направлений', 'Площадь защищаемых помещений (м^2)']
+# lis = ['Наименование объекта', 'Шифр (ИСП)', 'Тип объекта', 'Тип защищаемых помещений',
+#        'Количество направлений', 'Площадь защищаемых помещений (м^2)']
 
 gc = gspread.service_account(filename='creds.json')
 
@@ -78,7 +78,7 @@ def check_filled_projects(row) -> bool:
     Если какие-то характеристики отсутствуют, подсчет невозможен.'''
     characteristics = ['Наименование объекта', 'Шифр (ИСП)', 'Тип объекта',
        'Количество направлений', 'Площадь защищаемых помещений (м^2)']
-    if 'блок-контейнер' in row['Тип объекта'].strip().lower():                                #TODO надо ли это?
+    if 'блок-контейнер' in row['Тип объекта'].strip().lower():                                #TODO 
         return True
     for char in characteristics:
         if row[f'{char}'] == '' or row[f'{char}'] == None:
@@ -108,7 +108,7 @@ def check_amount_directions(comp, amount):
             for point_amount in complexity[i]:
                 if amount <= point_amount[1]:
                     return point_amount[0]
-            return round((amount/(8.5-comp) + comp/2),1)                              #TODO расчет, если направлений больше
+            return round((amount/(8.5-comp) + comp/2),1)
 
 
 def check_square(comp, row):
@@ -145,7 +145,7 @@ def check_square(comp, row):
 
 
 def check_stm_skud(row):
-    '''Расчитывает баллы в зависимости от характеристик.'''
+    '''Расчитывает баллы в зависимости от СТМ, СКУД.'''
     points = 0
     try:
         stm = int(row['СТМ (количество камер)'])
@@ -254,7 +254,7 @@ def func(engineers: list, df: DataFrame):
 
 
 # Сортировка по имени инженера
-Kulikov = df[df['Разработал'].str.contains('Куликов')]
+
 
 if __name__ == "__main__":
     a = get_list_of_engineers(df)
