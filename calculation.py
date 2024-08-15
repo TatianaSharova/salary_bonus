@@ -77,8 +77,9 @@ def check_filled_projects(row) -> bool:
     '''Проверка на возможность подсчета баллов.
     Если какие-то характеристики отсутствуют, подсчет невозможен.'''
     characteristics = ['Наименование объекта', 'Шифр (ИСП)', 'Тип объекта',
-       'Количество направлений', 'Площадь защищаемых помещений (м^2)']
-    if 'блок-контейнер' in row['Тип объекта'].strip().lower():                                #TODO 
+       'Количество направлений', 'Площадь защищаемых помещений (м^2)',
+       'Дата начала проекта', 'Дата окончания проекта']
+    if 'блок-контейнер' in row['Тип объекта'].strip().lower():
         return True
     for char in characteristics:
         if row[f'{char}'] == '' or row[f'{char}'] == None:
@@ -145,10 +146,10 @@ def check_square(comp, row):
 
 
 def check_stm_skud(row):
-    '''Расчитывает баллы в зависимости от СТМ, СКУД.'''
+    '''Расчитывает баллы в зависимости от СОТ, СКУД.'''
     points = 0
     try:
-        stm = int(row['СТМ (количество камер)'])
+        stm = int(row['СОТ (количество камер)'])
     except ValueError:
         stm = 0
     try:
@@ -190,13 +191,33 @@ def check_authors(authors):
     else:
         return 1
 
+def check_spend_time(row, points):
+    '''Проверка на соблюдение дэдлайнов проекта.
+     Если проект выполнен в срок из расчета 1 балл = 5 рабочим дням,
+      остаются те же баллы. Если дэдлайн был просрочен, полученные
+       баллы умножаются на понижающий коэффициент. '''
+    coefficient = 1                                                 #TODO определить понижающий коэффициент за просрочку дэдлайна
+    days_deadline = points*7
+
+    start_date = dt.strptime(row['Дата начала проекта'], "%d.%m.%Y").date()
+    end_date = dt.strptime(row['Дата окончания проекта'], "%d.%m.%Y").date()
+
+    spend_time_for_project = (end_date - start_date).days
+    if spend_time_for_project <= days_deadline:                        #TODO не считать гос выходные
+        return points
+    else:
+        return points*coefficient
+
+
+
+
 
 def count_points(row):
     points = 0
     filled_project = check_filled_projects(row)
     if not filled_project:
         return 'Необходимо заполнить данные для расчёта'
-    if 'блок-контейнер' in row['Тип объекта'].strip().lower():                                #TODO надо ли это?
+    if 'блок-контейнер' in row['Тип объекта'].strip().lower():
         return 1
     
     complexity = set_project_complexity(row)
@@ -207,6 +228,7 @@ def count_points(row):
     points += check_cultural_heritage(row)
     points += check_net(row)
     points = round(points/check_authors(row['Разработал']),1)
+    points = check_spend_time(row, points)
     return points
 
 
