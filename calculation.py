@@ -1,7 +1,9 @@
 import gspread
 from datetime import datetime as dt
+from datetime import timedelta
 import pandas as pd
 from pandas.core.frame import DataFrame
+import holidays
 pd.options.mode.chained_assignment = None
 
 # lis = ['Наименование объекта', 'Шифр (ИСП)', 'Тип объекта', 'Тип защищаемых помещений',
@@ -9,7 +11,7 @@ pd.options.mode.chained_assignment = None
 
 gc = gspread.service_account(filename='creds.json')
 
-worksheet = gc.open("test_sal").worksheet(f'{dt.now().year}')
+worksheet = gc.open("Копия Таблица проектов").worksheet(f'{dt.now().year}')
 
 df = pd.DataFrame(worksheet.get_all_records())
 
@@ -191,19 +193,42 @@ def check_authors(authors):
     else:
         return 1
 
+
+def count_non_working_days(start_date, end_date):
+    '''Считает количество нерабочих дней в заданном промежутке.'''
+    if start_date > end_date:
+        start_date, end_date = end_date, start_date
+    
+    ru_holidays = holidays.RU(years=range(start_date.year, end_date.year + 1))
+
+    non_working_days = 0
+
+
+    current_date = start_date
+    while current_date <= end_date:
+        if current_date.weekday() >= 5 or current_date in ru_holidays:
+            non_working_days += 1
+        current_date += timedelta(days=1)
+    
+    return non_working_days
+
+
 def check_spend_time(row, points):
     '''Проверка на соблюдение дэдлайнов проекта.
-     Если проект выполнен в срок из расчета 1 балл = 5 рабочим дням,
-      остаются те же баллы. Если дэдлайн был просрочен, полученные
-       баллы умножаются на понижающий коэффициент. '''
+    Если проект выполнен в срок из расчета 1 балл = 5 рабочим дням,
+    остаются те же баллы. Если дэдлайн был просрочен, полученные
+    баллы умножаются на понижающий коэффициент. '''
     coefficient = 1                                                 #TODO определить понижающий коэффициент за просрочку дэдлайна
-    days_deadline = points*7
+    days_deadline = points*5
 
     start_date = dt.strptime(row['Дата начала проекта'], "%d.%m.%Y").date()
     end_date = dt.strptime(row['Дата окончания проекта'], "%d.%m.%Y").date()
 
-    spend_time_for_project = (end_date - start_date).days
-    if spend_time_for_project <= days_deadline:                        #TODO не считать гос выходные
+    spend_time_including_holidays = (end_date - start_date).days
+    holidays_amount = count_non_working_days(start_date, end_date)
+    spend_working_time = spend_time_including_holidays - holidays_amount
+    
+    if spend_working_time <= days_deadline:
         return points
     else:
         return points*coefficient
@@ -259,10 +284,7 @@ def send_data_to_spreadsheet(df: DataFrame, engineer: str):
       "bold": True
     }
 })
-                                                                       
-
-
-
+                                                                    
 
 
 def func(engineers: list, df: DataFrame):
