@@ -1,0 +1,2 @@
+class TooManyRequestsApiError(Exception):
+    pass

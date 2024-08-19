@@ -4,16 +4,10 @@ from datetime import timedelta
 import pandas as pd
 from pandas.core.frame import DataFrame
 import holidays
+from gspread_formatting import *
+import time
+from exceptions import TooManyRequestsApiError
 pd.options.mode.chained_assignment = None
-
-# lis = ['Наименование объекта', 'Шифр (ИСП)', 'Тип объекта', 'Тип защищаемых помещений',
-#        'Количество направлений', 'Площадь защищаемых помещений (м^2)']
-
-gc = gspread.service_account(filename='creds.json')
-
-worksheet = gc.open("Копия Таблица проектов").worksheet(f'{dt.now().year}')
-
-df = pd.DataFrame(worksheet.get_all_records())
 
 
 def get_list_of_engineers(df: DataFrame) -> list:
@@ -76,8 +70,10 @@ def set_project_complexity(row):
 
 
 def check_filled_projects(row) -> bool:
-    '''Проверка на возможность подсчета баллов.
-    Если какие-то характеристики отсутствуют, подсчет невозможен.'''
+    '''
+    Проверка на возможность подсчета баллов.
+    Если какие-то характеристики отсутствуют, подсчет невозможен.
+    '''
     characteristics = ['Наименование объекта', 'Шифр (ИСП)', 'Тип объекта',
        'Количество направлений', 'Площадь защищаемых помещений (м^2)',
        'Дата начала проекта', 'Дата окончания проекта']
@@ -115,10 +111,11 @@ def check_amount_directions(comp, amount):
 
 
 def check_square(comp, row):
-    '''Расчитывает баллы в зависимости от площади
-    защищаемого помещения, сложности объекта и проделанной работы.'''
+    '''
+    Расчитывает баллы в зависимости от площади
+    защищаемого помещения, сложности объекта и проделанной работы.
+    '''
     count = 0
-    print(row['Шифр (ИСП)'])
     square = int(row['Площадь защищаемых помещений (м^2)'])
 
     ps = row['ПС'] == 'Есть'
@@ -147,7 +144,7 @@ def check_square(comp, row):
     return count
 
 
-def check_stm_skud(row):
+def check_sot_skud(row):
     '''Расчитывает баллы в зависимости от СОТ, СКУД.'''
     points = 0
     try:
@@ -172,6 +169,7 @@ def check_stm_skud(row):
 
 
 def check_cultural_heritage(row):
+    '''Проеряет, считается ли объект культурным наследием.'''
     if row['Объект культурного наследия'] == 'Да':
         return 3
     else:
@@ -179,6 +177,8 @@ def check_cultural_heritage(row):
 
 
 def check_net(row):
+    '''Проверяет, закладываются ли
+    сети в проет.'''
     if row['Сети'] == 'Есть':
         return 1.5
     else:
@@ -186,6 +186,8 @@ def check_net(row):
 
 
 def check_authors(authors):
+    '''Считает количество проектировщиков,
+    разрабатывающих проект.'''
     authors = authors.strip()
     if ',' in authors:
         authors = authors.split(',')
@@ -221,7 +223,7 @@ def check_spend_time(row, points):
     coefficient = 1                                                 #TODO определить понижающий коэффициент за просрочку дэдлайна
     days_deadline = points*5
 
-    start_date = dt.strptime(row['Дата начала проекта'], "%d.%m.%Y").date()
+    start_date = dt.strptime(row['Дата начала проекта'], "%d.%m.%Y").date()         #TODO обновление пакета holidays на сервере
     end_date = dt.strptime(row['Дата окончания проекта'], "%d.%m.%Y").date()
 
     spend_time_including_holidays = (end_date - start_date).days
@@ -235,9 +237,10 @@ def check_spend_time(row, points):
 
 
 
-
-
 def count_points(row):
+    '''
+    Считает сумму полученных баллов.
+    '''
     points = 0
     filled_project = check_filled_projects(row)
     if not filled_project:
@@ -249,7 +252,7 @@ def count_points(row):
     points += check_amount_directions(complexity, row['Количество направлений'])
     points += check_amount_directions(complexity, row['Другие АПТ (количество направлений)'])
     points += check_square(complexity, row)
-    points += check_stm_skud(row)
+    points += check_sot_skud(row)
     points += check_cultural_heritage(row)
     points += check_net(row)
     points = round(points/check_authors(row['Разработал']),1)
@@ -258,6 +261,9 @@ def count_points(row):
 
 
 def send_data_to_spreadsheet(df: DataFrame, engineer: str):
+    '''
+    Отправляет данные с баллами в таблицу "Премирование".
+    '''
     try:
         sheet = gc.open("Премирование").worksheet(f'{engineer}')
     except gspread.exceptions.SpreadsheetNotFound:
@@ -268,41 +274,61 @@ def send_data_to_spreadsheet(df: DataFrame, engineer: str):
     
     sheet.clear()
     
-    eng_small = df[['Страна', 'Наименование объекта', 'Шифр (ИСП)', 'Шифр (сторонней организации)', 'Разработал', 'Баллы']]
+    eng_small = df[['Страна', 'Наименование объекта', 'Шифр (ИСП)', 'Разработал', 'Баллы',
+                    'Дата начала проекта', 'Дата окончания проекта']]
     print(eng_small)
     
     sheet.update([eng_small.columns.values.tolist()] + eng_small.values.tolist())
-    sheet.format("A1:F1", {
-    "backgroundColor": {
-      "red": 0.7,
-      "green": 1.0,
-      "blue": 0.7
-    },
-    "wrapStrategy": 'WRAP',
-    "horizontalAlignment": "CENTER",
-    "textFormat": {
-      "bold": True
-    }
-})
+#     time.sleep(30)
+#     set_column_width(sheet, 'A', 100)
+#     set_column_width(sheet, 'B', 400)
+#     set_column_width(sheet, 'C', 200)
+#     set_column_width(sheet, 'D', 150)
+#     set_column_width(sheet, 'E', 150)
+#     set_column_width(sheet, 'F', 150)
+#     set_column_width(sheet, 'G', 150)
+#     sheet.format("A1:G1", {
+#     "backgroundColor": {
+#       "red": 0.7,
+#       "green": 1.0,
+#       "blue": 0.7
+#     },
+#     "wrapStrategy": 'WRAP',
+#     "horizontalAlignment": "CENTER",
+#     "verticalAlignment": "MIDDLE",
+#     "textFormat": {
+#       "bold": True
+#     }
+# })
                                                                     
 
 
-def func(engineers: list, df: DataFrame):
+def func(engineers: list[str], df: DataFrame):
+    '''
+    Собирает данные из архива проект, производит расчет баллов
+    и отправляет полученные данные в новую таблицу.
+    '''
     for engineer in engineers:
         print(engineer)
         engineer_projects = df[df['Разработал'].str.contains(f'{engineer}')]
         engineer_projects["Баллы"] = engineer_projects.apply(count_points, axis=1)
         send_data_to_spreadsheet(engineer_projects, engineer)
-        #print(engineer_projects)
 
-
-
-# Сортировка по имени инженера
 
 
 if __name__ == "__main__":
+    gc = gspread.service_account(filename='creds.json')
+
+    worksheet = gc.open("Копия Таблица проектов").worksheet(f'{dt.now().year}')
+
+    df = pd.DataFrame(worksheet.get_all_records())
+
     a = get_list_of_engineers(df)
 
-    b = func(a, df)
+    try:
+        b = func(a, df)
+    except gspread.exceptions.APIError:
+        raise TooManyRequestsApiError
+
 
 
