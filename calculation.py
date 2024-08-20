@@ -226,7 +226,7 @@ def check_spend_time(row, points):
     start_date = dt.strptime(row['Дата начала проекта'], "%d.%m.%Y").date()         #TODO обновление пакета holidays на сервере
     end_date = dt.strptime(row['Дата окончания проекта'], "%d.%m.%Y").date()
 
-    spend_time_including_holidays = (end_date - start_date).days
+    spend_time_including_holidays = (end_date - start_date).days + 1
     holidays_amount = count_non_working_days(start_date, end_date)
     spend_working_time = spend_time_including_holidays - holidays_amount
     
@@ -265,18 +265,19 @@ def send_data_to_spreadsheet(df: DataFrame, engineer: str):
     Отправляет данные с баллами в таблицу "Премирование".
     '''
     try:
-        sheet = gc.open("Премирование").worksheet(f'{engineer}')
+        sheet = gc.open(f'Премирование{dt.now().year}').worksheet(f'{engineer}')
     except gspread.exceptions.SpreadsheetNotFound:
-        pass                                                                 #TODO создание таблицы, если она не находится
+        sh = gc.create(f'Премирование{dt.now().year}')
+        sh.share('kroxxatt@gmail.com', perm_type='user', role='writer', notify=True)
+        sheet = sh.add_worksheet(title=f'{engineer}', rows=200, cols=20)
     except gspread.exceptions.WorksheetNotFound:
-        sh = gc.open("Премирование")
+        sh = gc.open(f'Премирование{dt.now().year}')
         sheet = sh.add_worksheet(title=f'{engineer}', rows=200, cols=20)
     
-    sheet.clear()
+    # sheet.clear()
     
     eng_small = df[['Страна', 'Наименование объекта', 'Шифр (ИСП)', 'Разработал', 'Баллы',
                     'Дата начала проекта', 'Дата окончания проекта']]
-    print(eng_small)
     
     sheet.update([eng_small.columns.values.tolist()] + eng_small.values.tolist())
 #     time.sleep(30)
@@ -300,35 +301,106 @@ def send_data_to_spreadsheet(df: DataFrame, engineer: str):
 #       "bold": True
 #     }
 # })
+def calculate_quarter_points(row):
+    '''
+    
+    '''
+    row['Дата начала проекта'] = pd.to_datetime(row['Дата начала проекта'],
+                                                   dayfirst=True, format='%d.%m.%Y')
+    row['Дата окончания проекта'] = pd.to_datetime(row['Дата окончания проекта'],
+                                                          dayfirst=True, format='%d.%m.%Y')
+
+    try:
+        quarters = pd.period_range(start=row['Дата начала проекта'], end=row['Дата окончания проекта'], freq='Q')
+    except ValueError:
+        month = row['Шифр (ИСП)'][5:7]
+        year = row['Шифр (ИСП)'][:4]
+        row['Дата начала проекта'] = pd.to_datetime(f'01.{month}.{year}',
+                                                   dayfirst=True, format='%d.%m.%Y')
+        row['Дата окончания проекта'] = pd.to_datetime(f'28.{month}.{year}',
+                                                       dayfirst=True, format='%d.%m.%Y')
+        quarters = pd.period_range(start=row['Дата начала проекта'], end=row['Дата окончания проекта'], freq='Q')
+
+    quarter_points = []
+
+    for quarter in quarters:
+        quarter_start = max(pd.Timestamp(quarter.start_time), row['Дата начала проекта'])
+        # print(quarter_start)
+        quarter_end = min(pd.Timestamp(quarter.end_time), row['Дата окончания проекта'])
+        # print(quarter_end)
+        days_in_quarter = (quarter_end - quarter_start).days + 1
+        total_days = (row['Дата окончания проекта'] - row['Дата начала проекта']).days + 1
+        # print(days_in_quarter, total_days)
+        proportion = days_in_quarter / total_days
+        points = round(row['Баллы'] * proportion, 2)
+        # print(proportion, points)
+        quarter_points.append({
+            'Шифр_ИСП': row['Шифр (ИСП)'],
+            'Квартал': quarter,
+            'Баллы': points
+        })
+    # print(quarter_points)
+    return quarter_points
+
+def calculate_quarter(df: DataFrame) -> DataFrame:
+    '''
+
+    '''
+    quarterly_points = df.apply(calculate_quarter_points, axis=1)
+    # print(quarterly_points)
+
+    quarterly_points = [item for sublist in quarterly_points for item in sublist]
+    # print(quarterly_points)
+
+    quarterly_df = pd.DataFrame(quarterly_points)
+    # print(quarterly_df)
+
+    result = quarterly_df.groupby('Квартал')['Баллы'].sum().reset_index()
+    result['Квартал'] = result['Квартал'].apply(lambda x: f"{x.quarter}-{x.year}")
+
+    print(result)
+    return result
                                                                     
 
 
-def func(engineers: list[str], df: DataFrame):
+def main_func(engineers: list[str], df: DataFrame):
     '''
-    Собирает данные из архива проект, производит расчет баллов
+    Собирает данные из архива проектов, производит расчет баллов
     и отправляет полученные данные в новую таблицу.
     '''
     for engineer in engineers:
         print(engineer)
-        engineer_projects = df[df['Разработал'].str.contains(f'{engineer}')]
+        engineer_projects = df.loc[df['Разработал'].str.contains(f'{engineer}')]
         engineer_projects["Баллы"] = engineer_projects.apply(count_points, axis=1)
         send_data_to_spreadsheet(engineer_projects, engineer)
+
+        engineer_projects_filtered = engineer_projects[[
+            'Шифр (ИСП)', 'Разработал', 'Дата начала проекта', 'Дата окончания проекта', 'Баллы'
+        ]].loc[engineer_projects['Баллы'] != 'Необходимо заполнить данные для расчёта']
+
+        if not engineer_projects_filtered.empty:
+            print(engineer_projects_filtered)
+            quarters = calculate_quarter(engineer_projects_filtered)
+        
 
 
 
 if __name__ == "__main__":
     gc = gspread.service_account(filename='creds.json')
 
-    worksheet = gc.open("Копия Таблица проектов").worksheet(f'{dt.now().year}')
+    try:
+       worksheet = gc.open("Копия Таблица проектов").worksheet(f'{dt.now().year}')
+    except gspread.exceptions.SpreadsheetNotFound:
+        pass                                                                    #TODO уведомление, что кто-то изменил название, или произошла смена таблицы
+    except gspread.exceptions.WorksheetNotFound:    #таблица не найдена при смене года, создать листок      
+        spreadsheet = gc.open("Копия Таблица проектов")
+        worksheet = spreadsheet.add_worksheet(f'{dt.now().year}')
 
     df = pd.DataFrame(worksheet.get_all_records())
 
-    a = get_list_of_engineers(df)
-
-    try:
-        b = func(a, df)
-    except gspread.exceptions.APIError:
-        raise TooManyRequestsApiError
-
-
-
+    if not df.empty:
+        list_of_engineers = get_list_of_engineers(df)
+        try:
+            salary_bonus = main_func(list_of_engineers, df)
+        except gspread.exceptions.APIError as error:                   #TODO уведомление об ошибке
+            raise TooManyRequestsApiError(error)
