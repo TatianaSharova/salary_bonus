@@ -344,7 +344,7 @@ def calculate_quarter_points(row):
 
 def calculate_quarter(df: DataFrame) -> DataFrame:
     '''
-
+    
     '''
     quarterly_points = df.apply(calculate_quarter_points, axis=1)
     # print(quarterly_points)
@@ -360,6 +360,39 @@ def calculate_quarter(df: DataFrame) -> DataFrame:
 
     print(result)
     return result
+
+
+def send_quarter_data_to_spreadsheet(df, engineer):
+    '''
+    Отсылает данные о баллах, заработанных в каждом квартале
+    в таблицу "Премирование".
+    '''
+    try:
+        sheet = gc.open(f'Премирование{dt.now().year}').worksheet(f'{engineer}')
+    except gspread.exceptions.SpreadsheetNotFound:
+        sh = gc.create(f'Премирование{dt.now().year}')
+        sh.share('kroxxatt@gmail.com', perm_type='user', role='writer', notify=True)
+        sheet = sh.add_worksheet(title=f'{engineer}', rows=200, cols=20)
+    except gspread.exceptions.WorksheetNotFound:
+        sh = gc.open(f'Премирование{dt.now().year}')
+        sheet = sh.add_worksheet(title=f'{engineer}', rows=200, cols=20)
+    
+    
+    # num_rows = len(df) + 1
+    # num_cols = len(df.columns)
+    # print(num_rows,num_cols)
+
+    # start_col = 'J'
+    # start_row = 1
+
+    # end_col = chr(ord(start_col) + num_cols - 1)
+    # end_row = start_row + num_rows - 1
+
+    # range_name = f'{start_col}{start_row}:{end_col}{end_row}'             #TODO сделать расчет для определения диапазона
+    # print(range_name)
+
+    sheet.update([df.columns.values.tolist()] + df.values.tolist(), range_name='J1:K200')
+
                                                                     
 
 
@@ -381,6 +414,7 @@ def main_func(engineers: list[str], df: DataFrame):
         if not engineer_projects_filtered.empty:
             print(engineer_projects_filtered)
             quarters = calculate_quarter(engineer_projects_filtered)
+            send_quarter_data_to_spreadsheet(quarters, engineer)
         
 
 
