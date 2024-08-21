@@ -61,7 +61,6 @@ def get_list_of_engineers(df: DataFrame) -> list:
         return list(engineers)
     else:
         unique_eng = engineers - set(non_count_eng)
-        print(unique_eng)
         return list(unique_eng)
 
 
@@ -182,11 +181,11 @@ if __name__ == "__main__":
     gc = gspread.service_account(filename='creds.json')
 
     try:
-       worksheet = gc.open("Копия Таблица проектов").worksheet(f'{dt.now().year}')
+       worksheet = gc.open("Таблица проектов").worksheet(f'{dt.now().year}')
     except gspread.exceptions.SpreadsheetNotFound:
         pass                                                                    #TODO уведомление, что кто-то изменил название, или произошла смена таблицы
     except gspread.exceptions.WorksheetNotFound:    #таблица не найдена при смене года, создать листок      
-        spreadsheet = gc.open("Копия Таблица проектов")
+        spreadsheet = gc.open("Таблица проектов")
         worksheet = spreadsheet.add_worksheet(f'{dt.now().year}')
 
     df = pd.DataFrame(worksheet.get_all_records())
