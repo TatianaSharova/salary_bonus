@@ -27,3 +27,6 @@ test1.py
 
 # google
 creds.json
+
+# cfg
+setup.cfg

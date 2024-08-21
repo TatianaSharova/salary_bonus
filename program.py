@@ -12,7 +12,7 @@ pd.options.mode.chained_assignment = None
 from counting_points import (check_amount_directions, check_authors,
                              check_cultural_heritage, check_filled_projects,
                              check_net, check_sot_skud, check_spend_time,
-                             check_square, set_project_complexity)
+                             check_square)
 from quaterly_points import calculate_quarter
 
 def non_count_engineers() -> list[str]:
@@ -76,8 +76,11 @@ def count_points(row: DataFrame) -> int:
         return 'Необходимо заполнить данные для расчёта'
     if 'блок-контейнер' in row['Тип объекта'].strip().lower():
         return 1
-    
-    complexity = set_project_complexity(row)
+    try:
+        complexity = int(row['Сложность'])
+    except ValueError:
+        return 'Сложность объекта заполнена некорректно'
+
     points += check_amount_directions(complexity, row['Количество направлений'])
     points += check_amount_directions(complexity, row['Другие АПТ (количество направлений)'])
     points += check_square(complexity, row)
