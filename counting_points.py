@@ -7,42 +7,42 @@ from pandas.core.frame import DataFrame
 
 pd.options.mode.chained_assignment = None
 
-def set_project_complexity(row: DataFrame) -> int:
-    '''
-    Устанавливает сложность объекта.
-    Сложность расчитывается от 1 до 5.
-    '''
-    first_type = ['блок-контейнер', 'школа', 'больница', 'поликлин']
-    second_type = ['адм. здание', 'административное здание', 'медицинские учреждения']
-    third_type = ['производственное здание', 'пром. предприятие', 'выставка', 'музей', 'цгс']
-    fourth_type = ['цод','производственное здание', 'пром. предприятие']
-    fifth_type = ['цод','производственное здание', 'пром. предприятие']
-    for type in first_type:
-        if type in row['Тип объекта'].strip().lower():
-            return 1
-    for type in second_type:
-        if type in row['Тип объекта'].strip().lower():
-            return 2
-    for type in third_type:
-        if type in row['Тип объекта'].strip().lower():
-            if (int(row['Количество направлений']) <= 8) or (
-                row['Тип объекта'].strip().lower() in ['выставка', 'музей']):
-                return 3
-            else:
-                return 4
-    for type in fourth_type:
-        if type in row['Тип объекта'].strip().lower():
-            if int(row['Площадь защищаемых помещений (м^2)']) < 500:
-                return 4
-            else:
-                return 5
+# def set_project_complexity(row: DataFrame) -> int:
+#     '''
+#     Устанавливает сложность объекта.
+#     Сложность расчитывается от 1 до 5.
+#     '''
+#     first_type = ['блок-контейнер', 'школа', 'больница', 'поликлин']
+#     second_type = ['адм. здание', 'административное здание', 'медицинские учреждения']
+#     third_type = ['производственное здание', 'пром. предприятие', 'выставка', 'музей', 'цгс']
+#     fourth_type = ['цод','производственное здание', 'пром. предприятие']
+#     fifth_type = ['цод','производственное здание', 'пром. предприятие']
+#     for type in first_type:
+#         if type in row['Тип объекта'].strip().lower():
+#             return 1
+#     for type in second_type:
+#         if type in row['Тип объекта'].strip().lower():
+#             return 2
+#     for type in third_type:
+#         if type in row['Тип объекта'].strip().lower():
+#             if (int(row['Количество направлений']) <= 8) or (
+#                 row['Тип объекта'].strip().lower() in ['выставка', 'музей']):
+#                 return 3
+#             else:
+#                 return 4
+#     for type in fourth_type:
+#         if type in row['Тип объекта'].strip().lower():
+#             if int(row['Площадь защищаемых помещений (м^2)']) < 500:
+#                 return 4
+#             else:
+#                 return 5
     
-    if int(row['Количество направлений']) <= 8:
-        return 3
-    elif int(row['Площадь защищаемых помещений (м^2)']) < 500:
-        return 4
-    else:
-        return 5
+#     if int(row['Количество направлений']) <= 8:
+#         return 3
+#     elif int(row['Площадь защищаемых помещений (м^2)']) < 500:
+#         return 4
+#     else:
+#         return 5
 
 
 def check_filled_projects(row: DataFrame) -> bool:
@@ -51,8 +51,8 @@ def check_filled_projects(row: DataFrame) -> bool:
     Если какие-то характеристики отсутствуют, подсчет невозможен.
     '''
     characteristics = ['Наименование объекта', 'Шифр (ИСП)', 'Тип объекта',
-                       'Площадь защищаемых помещений (м^2)',
-                       'Дата начала проекта', 'Дата окончания проекта']
+                       'Дата начала проекта', 'Дата окончания проекта',
+                       'Сложность']
     if 'блок-контейнер' in row['Тип объекта'].strip().lower():
         return True
     for char in characteristics:
@@ -94,7 +94,10 @@ def check_square(comp: int, row: DataFrame) -> int:
     защищаемого помещения, сложности объекта и проделанной работы.
     '''
     count = 0
-    square = int(row['Площадь защищаемых помещений (м^2)'])
+    try:
+        square = int(row['Площадь защищаемых помещений (м^2)'])
+    except ValueError:
+        square = 1
 
     ps = row['ПС'] == 'Есть'
     os = row['ОС'] == 'Есть'
@@ -115,7 +118,7 @@ def check_square(comp: int, row: DataFrame) -> int:
             for point_square in complexity[i]:
                 if square <= point_square[1]:
                     points = point_square[0]
-                    break                                                   #TODO если points не определились
+                    break
     for char in characteristics:
         if char == True:
             count += points
