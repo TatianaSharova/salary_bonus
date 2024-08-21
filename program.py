@@ -15,10 +15,32 @@ from counting_points import (check_amount_directions, check_authors,
                              check_square, set_project_complexity)
 from quaterly_points import calculate_quarter
 
+def non_count_engineers() -> list[str]:
+    '''
+    Получает список инженеров, для которых не надо делать премиальный расчет.
+    '''
+    try:
+        sheet = gc.open(f'Премирование{dt.now().year}').worksheet(f'Настройки')
+    except gspread.exceptions.SpreadsheetNotFound:
+        sh = gc.create(f'Премирование{dt.now().year}')
+        sh.share('kroxxatt@gmail.com', perm_type='user', role='writer', notify=True)        #TODO с кем шерить доступ
+        sheet = sh.add_worksheet(title='Настройки', rows=100, cols=20)
+    except gspread.exceptions.WorksheetNotFound:
+        sh = gc.open(f'Премирование{dt.now().year}')
+        sheet = sh.add_worksheet(title='Настройки', rows=100, cols=20)
+    
+    df = pd.DataFrame(sheet.get_all_records())
+    if not df.empty:
+        engineers = df['Не учитывать'].iloc[0].split(', ')                                #TODO избавиться от ', '
+        return engineers
+    else:
+        return None
+
 
 def get_list_of_engineers(df: DataFrame) -> list:
     '''Возвращает список инженеров.'''
     engineers = set(df['Разработал'])
+    non_count_eng = non_count_engineers()
     groups_of_engineers = set()
     groups = set()
 
@@ -32,9 +54,15 @@ def get_list_of_engineers(df: DataFrame) -> list:
     for group in groups_of_engineers:
         groups.update(group.split(','))
         engineers.remove(group)
-
+    
     engineers.union(groups)
-    return list(engineers)
+
+    if not non_count_eng:
+        return list(engineers)
+    else:
+        unique_eng = engineers - set(non_count_eng)
+        print(unique_eng)
+        return list(unique_eng)
 
 
 def count_points(row: DataFrame) -> int:
