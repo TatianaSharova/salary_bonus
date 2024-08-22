@@ -1,3 +1,4 @@
+import time
 from datetime import datetime as dt
 
 import gspread
@@ -105,33 +106,39 @@ def send_data_to_spreadsheet(df: DataFrame, engineer: str):
     except gspread.exceptions.WorksheetNotFound:
         sh = gc.open(f'Премирование{dt.now().year}')
         sheet = sh.add_worksheet(title=f'{engineer}', rows=200, cols=20)
+    
+
+    sheet.clear()
 
     
     eng_small = df[['Страна', 'Наименование объекта', 'Шифр (ИСП)', 'Разработал', 'Баллы',
                     'Дата начала проекта', 'Дата окончания проекта']]
     
     sheet.update([eng_small.columns.values.tolist()] + eng_small.values.tolist())
-#     time.sleep(30)
-#     set_column_width(sheet, 'A', 100)
-#     set_column_width(sheet, 'B', 400)
-#     set_column_width(sheet, 'C', 200)
-#     set_column_width(sheet, 'D', 150)
-#     set_column_width(sheet, 'E', 150)
-#     set_column_width(sheet, 'F', 150)
-#     set_column_width(sheet, 'G', 150)
-#     sheet.format("A1:G1", {
-#     "backgroundColor": {
-#       "red": 0.7,
-#       "green": 1.0,
-#       "blue": 0.7
-#     },
-#     "wrapStrategy": 'WRAP',
-#     "horizontalAlignment": "CENTER",
-#     "verticalAlignment": "MIDDLE",
-#     "textFormat": {
-#       "bold": True
-#     }
-# })
+    set_column_width(sheet, 'A', 100)
+    set_column_width(sheet, 'B', 400)
+    set_column_width(sheet, 'C', 200)
+    set_column_width(sheet, 'D', 150)
+    set_column_width(sheet, 'E', 150)
+    set_column_width(sheet, 'F', 150)
+    set_column_width(sheet, 'G', 150)
+    sheet.format("A1:G1", {
+    "backgroundColor": {
+      "red": 0.7,
+      "green": 1.0,
+      "blue": 0.7
+    },
+    "textFormat": {
+      "bold": True
+    }
+})
+    sheet.format('A1:K200', {
+    "wrapStrategy": 'WRAP',
+    "horizontalAlignment": "CENTER",
+    "verticalAlignment": "MIDDLE",
+    })
+    time.sleep(60)
+
 
 
 def send_quarter_data_to_spreadsheet(df: DataFrame,

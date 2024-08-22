@@ -50,7 +50,7 @@ def check_filled_projects(row: DataFrame) -> bool:
     Проверка на возможность подсчета баллов.
     Если какие-то характеристики отсутствуют, подсчет невозможен.
     '''
-    characteristics = ['Наименование объекта', 'Шифр (ИСП)', 'Тип объекта',
+    characteristics = ['Наименование объекта', 'Шифр (ИСП)',
                        'Дата начала проекта', 'Дата окончания проекта',
                        'Сложность']
     if 'блок-контейнер' in row['Тип объекта'].strip().lower():
@@ -106,7 +106,7 @@ def check_square(comp: int, row: DataFrame) -> int:
     characteristics = [ps,os,soue,asv]
 
     complexity = {
-        1 : [(0,10000)],
+        1 : [(1,400),(1.5,1000),(2,3000),(2.5,10000),(3,100000)],
         2 : [(2,400),(2.5,1000),(3,3000),(3.5,10000),(5,100000)],
         3 : [(2,400),(3,1000),(3.5,3000),(4,10000),(8,100000)],
         4 : [(3,400),(4,1000),(4.5,3000),(5,10000),(10,100000)],
@@ -199,6 +199,19 @@ def count_non_working_days(start_date: dt.date, end_date: dt.date) -> int:
         current_date += timedelta(days=1)
     
     return non_working_days
+
+
+def calculate_deadline(start_date, work_days):
+    current_date = start_date
+    days_added = 0
+    ru_holidays = holidays.RU()
+    
+    while days_added < work_days:
+        current_date += timedelta(days=1)
+        if current_date.weekday() < 5 and current_date not in ru_holidays:
+            days_added += 1
+    
+    return current_date
 
 
 def check_spend_time(row: DataFrame, points: int) -> int:
