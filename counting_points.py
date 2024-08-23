@@ -4,6 +4,7 @@ from datetime import timedelta
 import holidays
 import pandas as pd
 from pandas.core.frame import DataFrame
+from pandas.core.series import Series
 
 pd.options.mode.chained_assignment = None
 
@@ -45,7 +46,7 @@ pd.options.mode.chained_assignment = None
 #         return 5
 
 
-def check_filled_projects(row: DataFrame) -> bool:
+def check_filled_projects(row: Series) -> bool:
     '''
     Проверка на возможность подсчета баллов.
     Если какие-то характеристики отсутствуют, подсчет невозможен.
@@ -88,7 +89,7 @@ def check_amount_directions(comp: int, amount: str) -> int:
             return round((amount/(8.5-comp) + comp/2),1)
 
 
-def check_square(comp: int, row: DataFrame) -> int:
+def check_square(comp: int, row: Series) -> int:
     '''
     Расчитывает баллы в зависимости от площади
     защищаемого помещения, сложности объекта и проделанной работы.
@@ -125,7 +126,7 @@ def check_square(comp: int, row: DataFrame) -> int:
     return count
 
 
-def check_sot_skud(row: DataFrame) -> int:
+def check_sot_skud(row: Series) -> int:
     '''Расчитывает баллы в зависимости от СОТ, СКУД.'''
     points = 0
     try:
@@ -149,7 +150,7 @@ def check_sot_skud(row: DataFrame) -> int:
     return points
 
 
-def check_cultural_heritage(row: DataFrame) -> int:
+def check_cultural_heritage(row: Series) -> int:
     '''
     Проверяет, считается ли объект культурным наследием.
     Если считается, то прибавляется 3 балла.
@@ -160,7 +161,7 @@ def check_cultural_heritage(row: DataFrame) -> int:
         return 0
 
 
-def check_net(row: DataFrame) -> int:
+def check_net(row: Series) -> int:
     '''
     Проверяет, закладываются ли сети в проект.
     '''
@@ -207,31 +208,56 @@ def calculate_deadline(start_date, work_days):
     ru_holidays = holidays.RU()
     
     while days_added < work_days:
-        current_date += timedelta(days=1)
         if current_date.weekday() < 5 and current_date not in ru_holidays:
             days_added += 1
+        current_date += timedelta(days=1)
     
-    return current_date
+    return current_date - timedelta(days=1)
 
 
-def check_spend_time(row: DataFrame, points: int) -> int:
+# def check_spend_time(row: DataFrame, points: int) -> int:
+#     '''
+#     Проверка на соблюдение дэдлайнов проекта.
+#     Если проект выполнен в срок из расчета 1 балл = 5 рабочим дням,
+#     остаются те же баллы. Если дэдлайн был просрочен, полученные
+#     баллы умножаются на понижающий коэффициент.
+#     '''
+#     coefficient = 0.9                                               #TODO определить понижающий коэффициент за просрочку дэдлайна
+#     days_deadline = points*5
+
+#     start_date = dt.strptime(row['Дата начала проекта'], "%d.%m.%Y").date()         #TODO обновление пакета holidays на сервере
+#     end_date = dt.strptime(row['Дата окончания проекта'], "%d.%m.%Y").date()
+
+#     spend_time_including_holidays = (end_date - start_date).days + 1
+#     holidays_amount = count_non_working_days(start_date, end_date)
+#     spend_working_time = spend_time_including_holidays - holidays_amount
+    
+#     if spend_working_time <= days_deadline:
+#         return points
+#     else:
+#         return points*coefficient
+
+
+def check_spend_time(row: Series, points: int, df: DataFrame) -> int:
     '''
     Проверка на соблюдение дэдлайнов проекта.
     Если проект выполнен в срок из расчета 1 балл = 5 рабочим дням,
     остаются те же баллы. Если дэдлайн был просрочен, полученные
     баллы умножаются на понижающий коэффициент.
     '''
-    coefficient = 1                                                 #TODO определить понижающий коэффициент за просрочку дэдлайна
+    coefficient = 0.9                                               #TODO определить понижающий коэффициент за просрочку дэдлайна
     days_deadline = points*5
 
     start_date = dt.strptime(row['Дата начала проекта'], "%d.%m.%Y").date()         #TODO обновление пакета holidays на сервере
-    end_date = dt.strptime(row['Дата окончания проекта'], "%d.%m.%Y").date()
+    end_date = dt.strptime(row['Дата окончания проекта'], "%d.%m.%Y").date()        #TODO валидация даты, вдруг введена не дата!
 
-    spend_time_including_holidays = (end_date - start_date).days + 1
-    holidays_amount = count_non_working_days(start_date, end_date)
-    spend_working_time = spend_time_including_holidays - holidays_amount
+    deadline = calculate_deadline(start_date, days_deadline)
     
-    if spend_working_time <= days_deadline:
+    if deadline >= end_date:
+        deadline = deadline.strftime("%d.%m.%Y")
+        df.loc[df['Шифр (ИСП)'] == row['Шифр (ИСП)'], 'Дедлайн'] = deadline
         return points
     else:
+        deadline = deadline.strftime("%d.%m.%Y")
+        df.loc[df['Шифр (ИСП)'] == row['Шифр (ИСП)'], 'Дедлайн'] = deadline
         return points*coefficient
