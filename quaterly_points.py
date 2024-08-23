@@ -67,5 +67,5 @@ def calculate_quarter(df: DataFrame) -> DataFrame:
         lambda x: f"{x.quarter}-{x.year}"
         )
 
-    print(result)
+    # print(result)
     return result

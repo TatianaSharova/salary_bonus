@@ -6,6 +6,7 @@ import pandas as pd
 from gspread.worksheet import Worksheet
 from gspread_formatting import *
 from pandas.core.frame import DataFrame
+from pandas.core.series import Series
 
 from exceptions import TooManyRequestsApiError
 
@@ -65,7 +66,7 @@ def get_list_of_engineers(df: DataFrame) -> list:
         return list(unique_eng)
 
 
-def count_points(row: DataFrame) -> int:
+def count_points(row: Series, df: DataFrame) -> int:
     '''
     Считает и возвращает сумму полученных баллов.
     Если подсчет произвести невозможно, то возвращает
@@ -89,8 +90,34 @@ def count_points(row: DataFrame) -> int:
     points += check_cultural_heritage(row)
     points += check_net(row)
     points = round(points/check_authors(row['Разработал']),1)
-    points = check_spend_time(row, points)
+    points = check_spend_time(row, points, df)
+
     return points
+
+
+def color_overdue_deadline(df: DataFrame, sheet: Worksheet):
+    sheet.format('H2:H200', {
+        "backgroundColor": {
+            "red": 1,
+            "green": 1,
+            "blue": 1
+        },
+    })
+    for index, row in df.iterrows():
+        try:
+            end_date = dt.strptime(row['Дата окончания проекта'], "%d.%m.%Y").date()
+            deadline = dt.strptime(row['Дедлайн'], "%d.%m.%Y").date()
+        except ValueError:
+            continue
+
+        if deadline < end_date:
+            sheet.format(f'H{index + 2}', {
+                "backgroundColor": {
+                    "red": 1,
+                    "green": 0.8,
+                    "blue": 0.8
+                    },
+            })
 
 
 def send_data_to_spreadsheet(df: DataFrame, engineer: str):
@@ -108,13 +135,15 @@ def send_data_to_spreadsheet(df: DataFrame, engineer: str):
         sheet = sh.add_worksheet(title=f'{engineer}', rows=200, cols=20)
     
 
-    sheet.clear()
+    # sheet.clear()
 
     
     eng_small = df[['Страна', 'Наименование объекта', 'Шифр (ИСП)', 'Разработал', 'Баллы',
-                    'Дата начала проекта', 'Дата окончания проекта']]
+                    'Дата начала проекта', 'Дата окончания проекта', 'Дедлайн']]
     
     sheet.update([eng_small.columns.values.tolist()] + eng_small.values.tolist())
+
+    color_overdue_deadline(eng_small, sheet)
     set_column_width(sheet, 'A', 100)
     set_column_width(sheet, 'B', 400)
     set_column_width(sheet, 'C', 200)
@@ -122,7 +151,7 @@ def send_data_to_spreadsheet(df: DataFrame, engineer: str):
     set_column_width(sheet, 'E', 150)
     set_column_width(sheet, 'F', 150)
     set_column_width(sheet, 'G', 150)
-    sheet.format("A1:G1", {
+    sheet.format("A1:H1", {
     "backgroundColor": {
       "red": 0.7,
       "green": 1.0,
@@ -137,7 +166,6 @@ def send_data_to_spreadsheet(df: DataFrame, engineer: str):
     "horizontalAlignment": "CENTER",
     "verticalAlignment": "MIDDLE",
     })
-    time.sleep(60)
 
 
 
@@ -160,6 +188,17 @@ def send_quarter_data_to_spreadsheet(df: DataFrame,
      #TODO сделать расчет для определения диапазона?
 
     sheet.update([df.columns.values.tolist()] + df.values.tolist(), range_name='J1:K200')
+    sheet.format("J1:K1", {
+        "backgroundColor": {
+            "red": 0.8,
+          "green": 0.9,
+          "blue": 1
+        },
+        "textFormat": {
+          "bold": True
+        }
+    })
+    time.sleep(40)
 
                                                                     
 
@@ -171,16 +210,19 @@ def main_func(engineers: list[str], df: DataFrame):
     '''
     for engineer in engineers:
         print(engineer)
-        engineer_projects = df.loc[df['Разработал'].str.contains(f'{engineer}')]
-        engineer_projects["Баллы"] = engineer_projects.apply(count_points, axis=1)
+        engineer_projects = df.loc[df['Разработал'].str.contains(f'{engineer}')].reset_index(drop=True)
+        engineer_projects["Дедлайн"] = ''
+        engineer_projects["Баллы"] = engineer_projects.apply(count_points, axis=1, args=(engineer_projects,))
+        # print(engineer_projects)
         send_data_to_spreadsheet(engineer_projects, engineer)
+        # color_overdue_deadline(engineer_projects, engineer)
 
         engineer_projects_filtered = engineer_projects[[
             'Шифр (ИСП)', 'Разработал', 'Дата начала проекта', 'Дата окончания проекта', 'Баллы'
         ]].loc[engineer_projects['Баллы'] != 'Необходимо заполнить данные для расчёта']
 
         if not engineer_projects_filtered.empty:
-            print(engineer_projects_filtered)
+            # print(engineer_projects_filtered)
             quarters = calculate_quarter(engineer_projects_filtered)
             send_quarter_data_to_spreadsheet(quarters, engineer)
         
