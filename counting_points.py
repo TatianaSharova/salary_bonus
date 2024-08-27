@@ -202,7 +202,9 @@ def count_non_working_days(start_date: dt.date, end_date: dt.date) -> int:
     return non_working_days
 
 
-def calculate_deadline(start_date, work_days):
+def calculate_deadline(start_date: dt.date, work_days: int) -> dt.date:
+    '''Расчитывает дату дедлайна, исходя из
+    даты начала и количества рабочих дней.'''
     current_date = start_date
     days_added = 0
     ru_holidays = holidays.RU()
@@ -242,7 +244,7 @@ def check_spend_time(row: Series, points: int, df: DataFrame) -> int:
     '''
     Проверка на соблюдение дэдлайнов проекта.
     Если проект выполнен в срок из расчета 1 балл = 5 рабочим дням,
-    остаются те же баллы. Если дэдлайн был просрочен, полученные
+    остаются те же баллы. Если дедлайн был просрочен, полученные
     баллы умножаются на понижающий коэффициент.
     '''
     coefficient = 0.9                                               #TODO определить понижающий коэффициент за просрочку дэдлайна

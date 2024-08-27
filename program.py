@@ -95,7 +95,8 @@ def count_points(row: Series, df: DataFrame) -> int:
     return points
 
 
-def color_overdue_deadline(df: DataFrame, sheet: Worksheet):
+def color_overdue_deadline(df: DataFrame, sheet: Worksheet) -> Worksheet:
+    '''Окрашивает ячейки с просроченным дедлайном.'''
     sheet.format('H2:H200', {
         "backgroundColor": {
             "red": 1,
@@ -120,7 +121,7 @@ def color_overdue_deadline(df: DataFrame, sheet: Worksheet):
             })
 
 
-def send_data_to_spreadsheet(df: DataFrame, engineer: str):
+def send_data_to_spreadsheet(df: DataFrame, engineer: str) -> Worksheet:
     '''
     Отправляет данные с баллами в таблицу "Премирование".
     '''
@@ -144,28 +145,28 @@ def send_data_to_spreadsheet(df: DataFrame, engineer: str):
     sheet.update([eng_small.columns.values.tolist()] + eng_small.values.tolist())
 
     color_overdue_deadline(eng_small, sheet)
-    set_column_width(sheet, 'A', 100)
-    set_column_width(sheet, 'B', 400)
-    set_column_width(sheet, 'C', 200)
-    set_column_width(sheet, 'D', 150)
-    set_column_width(sheet, 'E', 150)
-    set_column_width(sheet, 'F', 150)
-    set_column_width(sheet, 'G', 150)
-    sheet.format("A1:H1", {
-    "backgroundColor": {
-      "red": 0.7,
-      "green": 1.0,
-      "blue": 0.7
-    },
-    "textFormat": {
-      "bold": True
-    }
-})
-    sheet.format('A1:K200', {
-    "wrapStrategy": 'WRAP',
-    "horizontalAlignment": "CENTER",
-    "verticalAlignment": "MIDDLE",
-    })
+#     set_column_width(sheet, 'A', 100)
+#     set_column_width(sheet, 'B', 400)
+#     set_column_width(sheet, 'C', 200)
+#     set_column_width(sheet, 'D', 150)
+#     set_column_width(sheet, 'E', 150)
+#     set_column_width(sheet, 'F', 150)
+#     set_column_width(sheet, 'G', 150)
+#     sheet.format("A1:H1", {
+#     "backgroundColor": {
+#       "red": 0.7,
+#       "green": 1.0,
+#       "blue": 0.7
+#     },
+#     "textFormat": {
+#       "bold": True
+#     }
+# })
+#     sheet.format('A1:K200', {
+#     "wrapStrategy": 'WRAP',
+#     "horizontalAlignment": "CENTER",
+#     "verticalAlignment": "MIDDLE",
+#     })
 
 
 
@@ -198,12 +199,12 @@ def send_quarter_data_to_spreadsheet(df: DataFrame,
           "bold": True
         }
     })
-    time.sleep(40)
+    time.sleep(20)
 
                                                                     
 
 
-def main_func(engineers: list[str], df: DataFrame):
+def main_func(engineers: list[str], df: DataFrame) -> None:
     '''
     Собирает данные из архива проектов, производит расчет баллов
     и отправляет полученные данные в новую таблицу.
@@ -213,16 +214,13 @@ def main_func(engineers: list[str], df: DataFrame):
         engineer_projects = df.loc[df['Разработал'].str.contains(f'{engineer}')].reset_index(drop=True)
         engineer_projects["Дедлайн"] = ''
         engineer_projects["Баллы"] = engineer_projects.apply(count_points, axis=1, args=(engineer_projects,))
-        # print(engineer_projects)
         send_data_to_spreadsheet(engineer_projects, engineer)
-        # color_overdue_deadline(engineer_projects, engineer)
 
         engineer_projects_filtered = engineer_projects[[
             'Шифр (ИСП)', 'Разработал', 'Дата начала проекта', 'Дата окончания проекта', 'Баллы'
         ]].loc[engineer_projects['Баллы'] != 'Необходимо заполнить данные для расчёта']
 
         if not engineer_projects_filtered.empty:
-            # print(engineer_projects_filtered)
             quarters = calculate_quarter(engineer_projects_filtered)
             send_quarter_data_to_spreadsheet(quarters, engineer)
         
@@ -231,20 +229,23 @@ def main_func(engineers: list[str], df: DataFrame):
 
 if __name__ == "__main__":
     gc = gspread.service_account(filename='creds.json')
+    a = True
 
-    try:
-       worksheet = gc.open("Таблица проектов").worksheet(f'{dt.now().year}')
-    except gspread.exceptions.SpreadsheetNotFound:
-        pass                                                                    #TODO уведомление, что кто-то изменил название, или произошла смена таблицы
-    except gspread.exceptions.WorksheetNotFound:    #таблица не найдена при смене года, создать листок      
-        spreadsheet = gc.open("Таблица проектов")
-        worksheet = spreadsheet.add_worksheet(f'{dt.now().year}')
+    while True:
 
-    df = pd.DataFrame(worksheet.get_all_records())
-
-    if not df.empty:
-        list_of_engineers = get_list_of_engineers(df)
         try:
-            salary_bonus = main_func(list_of_engineers, df)
-        except gspread.exceptions.APIError as error:                   #TODO уведомление об ошибке
-            raise TooManyRequestsApiError(error)
+           worksheet = gc.open("Таблица проектов").worksheet(f'{dt.now().year}')
+        except gspread.exceptions.SpreadsheetNotFound:
+            pass                                                                    #TODO уведомление, что кто-то изменил название, или произошла смена таблицы
+        except gspread.exceptions.WorksheetNotFound:    #таблица не найдена при смене года, создать листок      
+            spreadsheet = gc.open("Таблица проектов")
+            worksheet = spreadsheet.add_worksheet(f'{dt.now().year}')
+
+        df = pd.DataFrame(worksheet.get_all_records())
+
+        if not df.empty:
+            list_of_engineers = get_list_of_engineers(df)
+            try:
+                salary_bonus = main_func(list_of_engineers, df)
+            except gspread.exceptions.APIError as error:                   #TODO уведомление об ошибке
+                raise TooManyRequestsApiError(error)
