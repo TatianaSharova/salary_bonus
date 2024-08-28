@@ -9,6 +9,8 @@ from pandas.core.frame import DataFrame
 from pandas.core.series import Series
 
 from exceptions import TooManyRequestsApiError
+from worksheets import (connect_to_project_archive, connect_to_bonus_ws,
+                        color_overdue_deadline, connect_to_settings_ws)
 
 pd.options.mode.chained_assignment = None
 from counting_points import (check_amount_directions, check_authors,
@@ -21,15 +23,7 @@ def non_count_engineers() -> list[str]:
     '''
     Получает список инженеров, для которых не надо делать премиальный расчет.
     '''
-    try:
-        sheet = gc.open(f'Премирование{dt.now().year}').worksheet(f'Настройки')
-    except gspread.exceptions.SpreadsheetNotFound:
-        sh = gc.create(f'Премирование{dt.now().year}')
-        sh.share('kroxxatt@gmail.com', perm_type='user', role='writer', notify=True)        #TODO с кем шерить доступ
-        sheet = sh.add_worksheet(title='Настройки', rows=100, cols=20)
-    except gspread.exceptions.WorksheetNotFound:
-        sh = gc.open(f'Премирование{dt.now().year}')
-        sheet = sh.add_worksheet(title='Настройки', rows=100, cols=20)
+    sheet = connect_to_settings_ws()
     
     df = pd.DataFrame(sheet.get_all_records())
     if not df.empty:
@@ -84,7 +78,7 @@ def count_points(row: Series, df: DataFrame) -> int:
         return 'Сложность объекта заполнена некорректно'
 
     points += check_amount_directions(complexity, row['Количество направлений'])
-    points += check_amount_directions(complexity, row['Другие АПТ (количество направлений)'])
+    # points += check_amount_directions(complexity, row['Другие АПТ (количество направлений)'])
     points += check_square(complexity, row)
     points += check_sot_skud(row)
     points += check_cultural_heritage(row)
@@ -93,32 +87,6 @@ def count_points(row: Series, df: DataFrame) -> int:
     points = check_spend_time(row, points, df)
 
     return points
-
-
-def color_overdue_deadline(df: DataFrame, sheet: Worksheet) -> Worksheet:
-    '''Окрашивает ячейки с просроченным дедлайном.'''
-    sheet.format('H2:H200', {
-        "backgroundColor": {
-            "red": 1,
-            "green": 1,
-            "blue": 1
-        },
-    })
-    for index, row in df.iterrows():
-        try:
-            end_date = dt.strptime(row['Дата окончания проекта'], "%d.%m.%Y").date()
-            deadline = dt.strptime(row['Дедлайн'], "%d.%m.%Y").date()
-        except ValueError:
-            continue
-
-        if deadline < end_date:
-            sheet.format(f'H{index + 2}', {
-                "backgroundColor": {
-                    "red": 1,
-                    "green": 0.8,
-                    "blue": 0.8
-                    },
-            })
 
 
 def send_data_to_spreadsheet(df: DataFrame, engineer: str) -> Worksheet:
@@ -229,23 +197,17 @@ def main_func(engineers: list[str], df: DataFrame) -> None:
 
 if __name__ == "__main__":
     gc = gspread.service_account(filename='creds.json')
-    a = True
 
     while True:
 
-        try:
-           worksheet = gc.open("Таблица проектов").worksheet(f'{dt.now().year}')
-        except gspread.exceptions.SpreadsheetNotFound:
-            pass                                                                    #TODO уведомление, что кто-то изменил название, или произошла смена таблицы
-        except gspread.exceptions.WorksheetNotFound:    #таблица не найдена при смене года, создать листок      
-            spreadsheet = gc.open("Таблица проектов")
-            worksheet = spreadsheet.add_worksheet(f'{dt.now().year}')
+        worksheet = connect_to_project_archive()
 
         df = pd.DataFrame(worksheet.get_all_records())
 
         if not df.empty:
             list_of_engineers = get_list_of_engineers(df)
-            try:
-                salary_bonus = main_func(list_of_engineers, df)
-            except gspread.exceptions.APIError as error:                   #TODO уведомление об ошибке
-                raise TooManyRequestsApiError(error)
+            if list_of_engineers != []:
+                try:
+                    salary_bonus = main_func(list_of_engineers, df)
+                except gspread.exceptions.APIError as error:                   #TODO уведомление об ошибке
+                    raise TooManyRequestsApiError(error)
