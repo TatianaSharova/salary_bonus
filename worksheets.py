@@ -23,7 +23,7 @@ def get_column_letter(n: int) -> str:
     return string
 
 
-def create_new_worksheet(spreadsheet: Spreadsheet) -> Worksheet:
+def create_new_ws_project_archive(spreadsheet: Spreadsheet) -> Worksheet:
     '''
     Создает новый лист для архива проектов
     с таким же форматированием, как у листа прошлого года.
@@ -59,15 +59,15 @@ def connect_to_project_archive() -> Worksheet:
         pass                                                       #TODO уведомление, что кто-то изменил название, или произошла смена таблицы
     except gspread.exceptions.WorksheetNotFound:     
         spreadsheet = gc.open("Таблица проектов")
-        worksheet = create_new_worksheet(spreadsheet)
+        worksheet = create_new_ws_project_archive(spreadsheet)
     
     return worksheet
 
 def add_settings_ws(spreadsheet: Spreadsheet) -> Worksheet:
     '''Создает лист "Настройки" и форматирует его.'''
     sheet = spreadsheet.add_worksheet(title='Настройки', rows=100, cols=20)
-    sheet.update('A1', 'Не учитывать')
-    sheet.format('A1:С3', {
+    sheet.update([['Не учитывать']], 'A1')
+    sheet.format('A1:C3', {
         "wrapStrategy": 'WRAP',
         "horizontalAlignment": "CENTER",
         "verticalAlignment": "MIDDLE"
@@ -78,14 +78,20 @@ def add_settings_ws(spreadsheet: Spreadsheet) -> Worksheet:
             "green": 0.8,
             "blue": 0.8
         },
+        "textFormat": {
+            "fontSize": 12
+            }
     })
+    set_column_width(sheet, 'A', 300)
 
     return sheet
 
 
 def connect_to_bonus_ws() -> Spreadsheet:
-    '''Открывает таблицу "Премирование".
-    При смене года создает новую таблицу.'''
+    '''
+    Открывает таблицу "Премирование".
+    При смене года создает новую таблицу.
+    '''
     try:
         spreadsheet = gc.open(f'Премирование{dt.now().year}')
     except gspread.exceptions.SpreadsheetNotFound:
@@ -131,3 +137,83 @@ def color_overdue_deadline(df: DataFrame, sheet: Worksheet) -> Worksheet:
                     "blue": 0.8
                     },
             })
+
+
+def create_engineer_ws(spreadsheet: Spreadsheet, engineer: str) -> Worksheet:
+    '''
+    Создает для инженера лист и форматирует его.
+    '''
+    sheet = spreadsheet.add_worksheet(title=f'{engineer}', rows=200, cols=20)
+
+    set_column_widths(sheet, [('A', 100), ('B', 400), ('C', 200), ('D:G', 150)])
+
+    sheet.format("A1:H1", {
+        "backgroundColor": {
+        "red": 0.7,
+        "green": 1.0,
+        "blue": 0.7
+        },
+        "textFormat": {
+            "bold": True
+        }
+    })
+    sheet.format('A1:K200', {
+        "wrapStrategy": 'WRAP',
+        "horizontalAlignment": "CENTER",
+        "verticalAlignment": "MIDDLE",
+    })
+    sheet.format("J1:K1", {
+        "backgroundColor": {
+            "red": 0.8,
+          "green": 0.9,
+          "blue": 1
+        },
+        "textFormat": {
+          "bold": True
+        }
+    })
+    set_frozen(sheet, rows=1)
+
+    return sheet
+
+
+def send_data_to_spreadsheet(df: DataFrame, engineer: str) -> Worksheet:
+    '''
+    Отправляет данные с баллами в таблицу "Премирование".
+    '''
+    spreadsheet = connect_to_bonus_ws()
+
+    try:
+        sheet = spreadsheet.worksheet(f'{engineer}')
+    except gspread.exceptions.WorksheetNotFound:
+        sheet = create_engineer_ws(spreadsheet, engineer)
+    
+
+    # sheet.clear()
+
+    
+    eng_small = df[['Страна', 'Наименование объекта', 'Шифр (ИСП)', 'Разработал', 'Баллы',
+                    'Дата начала проекта', 'Дата окончания проекта', 'Дедлайн']]
+    
+    sheet.update([eng_small.columns.values.tolist()] + eng_small.values.tolist())
+
+    color_overdue_deadline(eng_small, sheet)
+
+
+def send_quarter_data_to_spreadsheet(df: DataFrame,
+                                     engineer: str) -> Worksheet:
+    '''
+    Отсылает данные о баллах, заработанных в каждом квартале
+    в таблицу "Премирование".
+    '''
+    spreadsheet = connect_to_bonus_ws()
+
+    try:
+        sheet = spreadsheet.worksheet(f'{engineer}')
+    except gspread.exceptions.WorksheetNotFound:
+        sheet = create_engineer_ws(spreadsheet, engineer)
+
+
+    sheet.update([df.columns.values.tolist()] + df.values.tolist(), range_name='J1:K200')
+
+    time.sleep(20)
