@@ -1,5 +1,11 @@
 import time
+import os
+import asyncio
+import aiogram
+from aiogram.exceptions import TelegramAPIError
 from datetime import datetime as dt
+
+from dotenv import load_dotenv
 
 import gspread
 import pandas as pd
@@ -9,8 +15,9 @@ from pandas.core.frame import DataFrame
 from pandas.core.series import Series
 
 from exceptions import TooManyRequestsApiError
-from worksheets import (connect_to_project_archive, connect_to_bonus_ws,
-                        color_overdue_deadline, connect_to_settings_ws)
+from worksheets import (connect_to_project_archive, connect_to_settings_ws,
+                        send_quarter_data_to_spreadsheet,
+                        send_data_to_spreadsheet)
 
 pd.options.mode.chained_assignment = None
 from counting_points import (check_amount_directions, check_authors,
@@ -18,6 +25,19 @@ from counting_points import (check_amount_directions, check_authors,
                              check_net, check_sot_skud, check_spend_time,
                              check_square)
 from quaterly_points import calculate_quarter
+
+load_dotenv()
+
+TELEGRAM_CHAT_ID = os.getenv('TELEGRAM_CHAT_ID')
+TELEGRAM_TOKEN = os.getenv('TELEGRAM_TOKEN')
+
+async def send_message(bot: aiogram.Bot, message: str):
+    '''Присылает сообщение в телеграме.'''
+    try:
+        await bot.send_message(chat_id=TELEGRAM_CHAT_ID,
+                               text=f'{message}')
+    except TelegramAPIError:
+        pass
 
 def non_count_engineers() -> list[str]:
     '''
@@ -78,7 +98,6 @@ def count_points(row: Series, df: DataFrame) -> int:
         return 'Сложность объекта заполнена некорректно'
 
     points += check_amount_directions(complexity, row['Количество направлений'])
-    # points += check_amount_directions(complexity, row['Другие АПТ (количество направлений)'])
     points += check_square(complexity, row)
     points += check_sot_skud(row)
     points += check_cultural_heritage(row)
@@ -87,89 +106,6 @@ def count_points(row: Series, df: DataFrame) -> int:
     points = check_spend_time(row, points, df)
 
     return points
-
-
-def send_data_to_spreadsheet(df: DataFrame, engineer: str) -> Worksheet:
-    '''
-    Отправляет данные с баллами в таблицу "Премирование".
-    '''
-    try:
-        sheet = gc.open(f'Премирование{dt.now().year}').worksheet(f'{engineer}')
-    except gspread.exceptions.SpreadsheetNotFound:
-        sh = gc.create(f'Премирование{dt.now().year}')
-        sh.share('kroxxatt@gmail.com', perm_type='user', role='writer', notify=True)
-        sheet = sh.add_worksheet(title=f'{engineer}', rows=200, cols=20)
-    except gspread.exceptions.WorksheetNotFound:
-        sh = gc.open(f'Премирование{dt.now().year}')
-        sheet = sh.add_worksheet(title=f'{engineer}', rows=200, cols=20)
-    
-
-    # sheet.clear()
-
-    
-    eng_small = df[['Страна', 'Наименование объекта', 'Шифр (ИСП)', 'Разработал', 'Баллы',
-                    'Дата начала проекта', 'Дата окончания проекта', 'Дедлайн']]
-    
-    sheet.update([eng_small.columns.values.tolist()] + eng_small.values.tolist())
-
-    color_overdue_deadline(eng_small, sheet)
-#     set_column_width(sheet, 'A', 100)
-#     set_column_width(sheet, 'B', 400)
-#     set_column_width(sheet, 'C', 200)
-#     set_column_width(sheet, 'D', 150)
-#     set_column_width(sheet, 'E', 150)
-#     set_column_width(sheet, 'F', 150)
-#     set_column_width(sheet, 'G', 150)
-#     sheet.format("A1:H1", {
-#     "backgroundColor": {
-#       "red": 0.7,
-#       "green": 1.0,
-#       "blue": 0.7
-#     },
-#     "textFormat": {
-#       "bold": True
-#     }
-# })
-#     sheet.format('A1:K200', {
-#     "wrapStrategy": 'WRAP',
-#     "horizontalAlignment": "CENTER",
-#     "verticalAlignment": "MIDDLE",
-#     })
-
-
-
-def send_quarter_data_to_spreadsheet(df: DataFrame,
-                                     engineer: str) -> Worksheet:
-    '''
-    Отсылает данные о баллах, заработанных в каждом квартале
-    в таблицу "Премирование".
-    '''
-    try:
-        sheet = gc.open(f'Премирование{dt.now().year}').worksheet(f'{engineer}')
-    except gspread.exceptions.SpreadsheetNotFound:
-        sh = gc.create(f'Премирование{dt.now().year}')
-        sh.share('kroxxatt@gmail.com', perm_type='user', role='writer', notify=True)        #TODO с кем шерить доступ
-        sheet = sh.add_worksheet(title=f'{engineer}', rows=200, cols=20)
-    except gspread.exceptions.WorksheetNotFound:
-        sh = gc.open(f'Премирование{dt.now().year}')
-        sheet = sh.add_worksheet(title=f'{engineer}', rows=200, cols=20)
-    
-     #TODO сделать расчет для определения диапазона?
-
-    sheet.update([df.columns.values.tolist()] + df.values.tolist(), range_name='J1:K200')
-    sheet.format("J1:K1", {
-        "backgroundColor": {
-            "red": 0.8,
-          "green": 0.9,
-          "blue": 1
-        },
-        "textFormat": {
-          "bold": True
-        }
-    })
-    time.sleep(20)
-
-                                                                    
 
 
 def main_func(engineers: list[str], df: DataFrame) -> None:
@@ -193,21 +129,27 @@ def main_func(engineers: list[str], df: DataFrame) -> None:
             send_quarter_data_to_spreadsheet(quarters, engineer)
         
 
+async def main():
+    gc = gspread.service_account(filename='creds.json')
+    bot = aiogram.Bot(token=TELEGRAM_TOKEN)
 
+    worksheet = connect_to_project_archive()
+
+    df = pd.DataFrame(worksheet.get_all_records())
+
+    if not df.empty:
+        list_of_engineers = get_list_of_engineers(df)
+        if list_of_engineers != []:
+            try:
+                salary_bonus = main_func(list_of_engineers, df)
+                await send_message(bot, 'Расчет баллов успешно выполнен.')
+            except gspread.exceptions.APIError as error:
+                raise TooManyRequestsApiError(error)
+            except Exception as error:
+                await send_message(bot, f'Ошибка: {error}')
+    
+    await bot.session.close()
+    
 
 if __name__ == "__main__":
-    gc = gspread.service_account(filename='creds.json')
-
-    while True:
-
-        worksheet = connect_to_project_archive()
-
-        df = pd.DataFrame(worksheet.get_all_records())
-
-        if not df.empty:
-            list_of_engineers = get_list_of_engineers(df)
-            if list_of_engineers != []:
-                try:
-                    salary_bonus = main_func(list_of_engineers, df)
-                except gspread.exceptions.APIError as error:                   #TODO уведомление об ошибке
-                    raise TooManyRequestsApiError(error)
+    asyncio.run(main())
