@@ -1,7 +1,30 @@
 import pandas as pd
 from pandas.core.frame import DataFrame
+from pandas.core.indexes.period import PeriodIndex
 
 pd.options.mode.chained_assignment = None
+
+
+def find_period(row: DataFrame) -> PeriodIndex:
+    '''
+    Расчитывает период для блок-контейнеров от даты начала и конца.
+    Дату начала берет из шифра ИСП. Дата окончания считается концом месяца.
+    '''
+    try:
+        quarters = pd.period_range(start=row['Дата начала проекта'],
+                                   end=row['Дата окончания проекта'], freq='Q')
+    except ValueError:
+        month = row['Шифр (ИСП)'][5:7]
+        year = row['Шифр (ИСП)'][:4]
+        row['Дата начала проекта'] = pd.to_datetime(f'01.{month}.{year}',
+                                                    dayfirst=True, format='%d.%m.%Y')
+        row['Дата окончания проекта'] = pd.to_datetime(f'28.{month}.{year}',
+                                                       dayfirst=True, format='%d.%m.%Y')
+        quarters = pd.period_range(start=row['Дата начала проекта'],
+                                   end=row['Дата окончания проекта'], freq='Q')
+    
+    return quarters
+
 
 
 def calculate_quarter_points(row: DataFrame) -> list[dict]:
@@ -21,19 +44,9 @@ def calculate_quarter_points(row: DataFrame) -> list[dict]:
     
     if row['Дата начала проекта'] > row['Дата окончания проекта']:
         row['Дата начала проекта'], row['Дата окончания проекта'] = row['Дата окончания проекта'], row['Дата начала проекта']
+    
 
-    try:
-        quarters = pd.period_range(start=row['Дата начала проекта'],
-                                   end=row['Дата окончания проекта'], freq='Q')
-    except ValueError:
-        month = row['Шифр (ИСП)'][5:7]
-        year = row['Шифр (ИСП)'][:4]
-        row['Дата начала проекта'] = pd.to_datetime(f'01.{month}.{year}',
-                                                    dayfirst=True, format='%d.%m.%Y')
-        row['Дата окончания проекта'] = pd.to_datetime(f'28.{month}.{year}',
-                                                       dayfirst=True, format='%d.%m.%Y')
-        quarters = pd.period_range(start=row['Дата начала проекта'],
-                                   end=row['Дата окончания проекта'], freq='Q')
+    quarters = find_period(row)
 
     quarter_points = []
 
