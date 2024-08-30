@@ -1,4 +1,5 @@
 import time
+import os
 from datetime import datetime as dt
 
 import gspread
@@ -9,7 +10,11 @@ from gspread_formatting import *
 from pandas.core.frame import DataFrame
 from pandas.core.series import Series
 
-gc = gspread.service_account(filename='creds.json')
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+creds_path = os.path.join(BASE_DIR, 'creds.json')
+env_path = os.path.join(BASE_DIR, '.env')
+gc = gspread.service_account(filename=creds_path)
+
 
 def get_column_letter(n: int) -> str:
     '''
