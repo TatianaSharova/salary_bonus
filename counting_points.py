@@ -13,7 +13,7 @@ pd.options.mode.chained_assignment = None
 #     Устанавливает сложность объекта.
 #     Сложность расчитывается от 1 до 5.
 #     '''
-#     first_type = ['блок-контейнер', 'школа', 'больница', 'поликлин']
+#     first_type = ['блок-контейнер', 'контейнер', 'школа', 'больница', 'поликлин']
 #     second_type = ['адм. здание', 'административное здание', 'медицинские учреждения']
 #     third_type = ['производственное здание', 'пром. предприятие', 'выставка', 'музей', 'цгс']
 #     fourth_type = ['цод','производственное здание', 'пром. предприятие']
@@ -250,8 +250,11 @@ def check_spend_time(row: Series, points: int, df: DataFrame) -> int:
     coefficient = 0.9                                               #TODO определить понижающий коэффициент за просрочку дэдлайна
     days_deadline = points*5
 
-    start_date = dt.strptime(row['Дата начала проекта'], "%d.%m.%Y").date()         #TODO обновление пакета holidays на сервере
-    end_date = dt.strptime(row['Дата окончания проекта'], "%d.%m.%Y").date()        #TODO валидация даты, вдруг введена не дата!
+    try:
+        start_date = dt.strptime(row['Дата начала проекта'], "%d.%m.%Y").date()         #TODO обновление пакета holidays на сервере
+        end_date = dt.strptime(row['Дата окончания проекта'], "%d.%m.%Y").date()
+    except ValueError:
+        return 'Некорректно введены даты.'
 
     deadline = calculate_deadline(start_date, days_deadline)
     
