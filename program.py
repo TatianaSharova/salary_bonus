@@ -26,7 +26,12 @@ from counting_points import (check_amount_directions, check_authors,
                              check_square)
 from quaterly_points import calculate_quarter
 
-load_dotenv()
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+env_path = os.path.join(BASE_DIR, '.env')
+load_dotenv(dotenv_path=env_path)
+
+
+creds_path = os.path.join(BASE_DIR, 'creds.json')
 
 TELEGRAM_CHAT_ID = os.getenv('TELEGRAM_CHAT_ID')
 TELEGRAM_TOKEN = os.getenv('TELEGRAM_TOKEN')
@@ -130,7 +135,7 @@ def main_func(engineers: list[str], df: DataFrame) -> None:
         
 
 async def main():
-    gc = gspread.service_account(filename='creds.json')
+    gc = gspread.service_account(filename=creds_path)
     bot = aiogram.Bot(token=TELEGRAM_TOKEN)
 
     worksheet = connect_to_project_archive()
