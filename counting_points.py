@@ -89,6 +89,22 @@ def check_amount_directions(comp: int, amount: str) -> int:
             return round((amount/(8.5-comp) + comp/2),1)
 
 
+def define_square(square: str) -> float:
+    '''
+    Подготавливает введенные данные для дальнейших вычислений.
+    '''
+    try:
+        square = float(square)
+    except ValueError as error:
+        if ',' in square:
+            numbers = square.split(',')
+            square = float(numbers[0])
+        else:
+            square = 1.0
+    return square
+
+
+
 def check_square(comp: int, row: Series) -> int:
     '''
     Расчитывает баллы в зависимости от площади
@@ -96,9 +112,10 @@ def check_square(comp: int, row: Series) -> int:
     '''
     count = 0
     try:
-        square = int(row['Площадь защищаемых помещений (м^2)'])
+        square = float(row['Площадь защищаемых помещений (м^2)'])
     except ValueError:
-        square = 1
+        square = define_square(row['Площадь защищаемых помещений (м^2)'])
+
 
     ps = row['ПС'] == 'Есть'
     os = row['ОС'] == 'Есть'
@@ -258,11 +275,9 @@ def check_spend_time(row: Series, points: int, df: DataFrame) -> int:
 
     deadline = calculate_deadline(start_date, days_deadline)
     
-    if deadline >= end_date:
-        deadline = deadline.strftime("%d.%m.%Y")
-        df.loc[df['Шифр (ИСП)'] == row['Шифр (ИСП)'], 'Дедлайн'] = deadline
-        return points
-    else:
-        deadline = deadline.strftime("%d.%m.%Y")
-        df.loc[df['Шифр (ИСП)'] == row['Шифр (ИСП)'], 'Дедлайн'] = deadline
-        return points*coefficient
+    if deadline < end_date:
+        points = points*coefficient
+
+    deadline = deadline.strftime("%d.%m.%Y")
+    df.loc[df['Шифр (ИСП)'] == row['Шифр (ИСП)'], 'Дедлайн'] = deadline
+    return points
