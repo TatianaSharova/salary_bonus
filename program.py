@@ -46,7 +46,7 @@ async def send_message(bot: aiogram.Bot, message: str):
 
 def non_count_engineers() -> list[str]:
     '''
-    Получает список инженеров, для которых не надо делать премиальный расчет.
+    Получает список проектировщиков, для которых не надо делать премиальный расчет.
     '''
     sheet = connect_to_settings_ws()
     
@@ -58,9 +58,13 @@ def non_count_engineers() -> list[str]:
         return None
 
 
-def get_list_of_engineers(df: DataFrame) -> list:
-    '''Возвращает список инженеров.'''
-    engineers = set(df['Разработал'])
+def get_list_of_engineers(df: DataFrame, colomn: str) -> list:
+    '''
+    Принимает датафрейм и название столбца,
+    из которого брать фамилии проектировщиков.
+    Возвращает список проектировщиков.
+    '''
+    engineers = set(df[colomn])
     non_count_eng = non_count_engineers()
     groups_of_engineers = set()
     groups = set()
@@ -113,7 +117,7 @@ def count_points(row: Series, df: DataFrame) -> int:
     return points
 
 
-def main_func(engineers: list[str], df: DataFrame) -> None:
+def process_data(engineers: list[str], df: DataFrame) -> None:
     '''
     Собирает данные из архива проектов, производит расчет баллов
     и отправляет полученные данные в новую таблицу.
@@ -132,23 +136,29 @@ def main_func(engineers: list[str], df: DataFrame) -> None:
         if not engineer_projects_filtered.empty:
             quarters = calculate_quarter(engineer_projects_filtered)
             send_quarter_data_to_spreadsheet(quarters, engineer)
+        time.sleep(20)
         
 
 async def main():
     gc = gspread.service_account(filename=creds_path)
     bot = aiogram.Bot(token=TELEGRAM_TOKEN)
+    
+    try:
+        worksheet = connect_to_project_archive()
+    except gspread.exceptions.SpreadsheetNotFound:
+        await send_message(bot, 'Ошибка: таблица "Таблица проектов" не найдена.\n'
+                           'Возможно название было сменено.')
 
-    worksheet = connect_to_project_archive()
-
-    df = pd.DataFrame(worksheet.get_all_records())
+    df = pd.DataFrame(worksheet.get_all_records(numericise_ignore=['all']))
 
     if not df.empty:
-        list_of_engineers = get_list_of_engineers(df)
+        list_of_engineers = get_list_of_engineers(df, colomn='Разработал')
         if list_of_engineers != []:
             try:
-                salary_bonus = main_func(list_of_engineers, df)
+                salary_bonus = process_data(list_of_engineers, df)
                 await send_message(bot, 'Расчет баллов успешно выполнен.')
-            except gspread.exceptions.APIError as error:
+            except gspread.exceptions.APIError:
+                await send_message(bot, 'Ошибка: слишком много запросов к API Google.')
                 raise TooManyRequestsApiError(error)
             except Exception as error:
                 await send_message(bot, f'Ошибка: {error}')
