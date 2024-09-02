@@ -59,11 +59,9 @@ def connect_to_project_archive() -> Worksheet:
     При смене года создает новый лист.
     '''
     try:
-       worksheet = gc.open("Таблица проектов").worksheet(f'{dt.now().year}')
-    except gspread.exceptions.SpreadsheetNotFound:
-        pass                                                       #TODO уведомление, что кто-то изменил название, или произошла смена таблицы
+       worksheet = gc.open('Таблица проектов').worksheet(f'{dt.now().year}')
     except gspread.exceptions.WorksheetNotFound:     
-        spreadsheet = gc.open("Таблица проектов")
+        spreadsheet = gc.open('Таблица проектов')
         worksheet = create_new_ws_project_archive(spreadsheet)
     
     return worksheet
@@ -73,18 +71,18 @@ def add_settings_ws(spreadsheet: Spreadsheet) -> Worksheet:
     sheet = spreadsheet.add_worksheet(title='Настройки', rows=100, cols=20)
     sheet.update([['Не учитывать']], 'A1')
     sheet.format('A1:C3', {
-        "wrapStrategy": 'WRAP',
-        "horizontalAlignment": "CENTER",
-        "verticalAlignment": "MIDDLE"
+        'wrapStrategy': 'WRAP',
+        'horizontalAlignment': 'CENTER',
+        'verticalAlignment': 'MIDDLE'
     })
     sheet.format('A1', {
-        "backgroundColor": {
-            "red": 1,
-            "green": 0.8,
-            "blue": 0.8
+        'backgroundColor': {
+            'red': 1,
+            'green': 0.8,
+            'blue': 0.8
         },
-        "textFormat": {
-            "fontSize": 12
+        'textFormat': {
+            'fontSize': 12
             }
     })
     set_column_width(sheet, 'A', 300)
@@ -121,63 +119,65 @@ def connect_to_settings_ws() -> Worksheet:
 def color_overdue_deadline(df: DataFrame, sheet: Worksheet) -> Worksheet:
     '''Окрашивает ячейки с просроченным дедлайном.'''
     sheet.format('H2:H200', {
-        "backgroundColor": {
-            "red": 1,
-            "green": 1,
-            "blue": 1
+        'backgroundColor': {
+            'red': 1,
+            'green': 1,
+            'blue': 1
         },
     })
     for index, row in df.iterrows():
         try:
-            end_date = dt.strptime(row['Дата окончания проекта'], "%d.%m.%Y").date()
-            deadline = dt.strptime(row['Дедлайн'], "%d.%m.%Y").date()
+            end_date = dt.strptime(row['Дата окончания проекта'], '%d.%m.%Y').date()
+            deadline = dt.strptime(row['Дедлайн'], '%d.%m.%Y').date()
         except ValueError:
             continue
 
         if deadline < end_date:
             sheet.format(f'H{index + 2}', {
-                "backgroundColor": {
-                    "red": 1,
-                    "green": 0.8,
-                    "blue": 0.8
+                'backgroundColor': {
+                    'red': 1,
+                    'green': 0.8,
+                    'blue': 0.8
                     },
             })
 
 
 def create_engineer_ws(spreadsheet: Spreadsheet, engineer: str) -> Worksheet:
     '''
-    Создает для инженера лист и форматирует его.
+    Создает для проектироващика лист и форматирует его.
     '''
     sheet = spreadsheet.add_worksheet(title=f'{engineer}', rows=200, cols=20)
 
     set_column_widths(sheet, [('A', 100), ('B', 400), ('C', 200), ('D:G', 150)])
 
-    sheet.format("A1:H1", {
-        "backgroundColor": {
-        "red": 0.7,
-        "green": 1.0,
-        "blue": 0.7
+    sheet.format('A1:H1', {
+        'backgroundColor': {
+        'red': 0.7,
+        'green': 1.0,
+        'blue': 0.7
         },
-        "textFormat": {
-            "bold": True
+        'textFormat': {
+            'bold': True
         }
     })
     sheet.format('A1:K200', {
-        "wrapStrategy": 'WRAP',
-        "horizontalAlignment": "CENTER",
-        "verticalAlignment": "MIDDLE",
+        'wrapStrategy': 'WRAP',
+        'horizontalAlignment': 'CENTER',
+        'verticalAlignment': 'MIDDLE',
     })
-    sheet.format("J1:K1", {
-        "backgroundColor": {
-            "red": 0.8,
-          "green": 0.9,
-          "blue": 1
+    sheet.format('J1:K1', {
+        'backgroundColor': {
+            'red': 0.8,
+            'green': 0.9,
+            'blue': 1
         },
-        "textFormat": {
-          "bold": True
+        'textFormat': {
+          'bold': True
         }
     })
     set_frozen(sheet, rows=1)
+
+    time.sleep(30)
 
     return sheet
 
@@ -220,5 +220,3 @@ def send_quarter_data_to_spreadsheet(df: DataFrame,
 
 
     sheet.update([df.columns.values.tolist()] + df.values.tolist(), range_name='J1:K200')
-
-    time.sleep(20)
