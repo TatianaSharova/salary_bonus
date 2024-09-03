@@ -182,7 +182,7 @@ def create_engineer_ws(spreadsheet: Spreadsheet, engineer: str) -> Worksheet:
     return sheet
 
 
-def send_data_to_spreadsheet(df: DataFrame, engineer: str) -> Worksheet:
+def send_project_data_to_spreadsheet(df: DataFrame, engineer: str) -> Worksheet:
     '''
     Отправляет данные с баллами в таблицу "Премирование".
     '''
@@ -220,3 +220,28 @@ def send_quarter_data_to_spreadsheet(df: DataFrame,
 
 
     sheet.update([df.columns.values.tolist()] + df.values.tolist(), range_name='J1:K200')
+
+
+def send_adj_data_to_spreadsheet(df: DataFrame,
+                                 engineer: str) -> Worksheet:
+    '''
+    Отсылает данные о сделанных корректировках.
+    '''
+    spreadsheet = connect_to_bonus_ws()
+
+    try:
+        sheet = spreadsheet.worksheet(f'{engineer}')
+    except gspread.exceptions.WorksheetNotFound:
+        sheet = create_engineer_ws(spreadsheet, engineer)
+
+
+    
+    sheet.merge_cells('M1:Q1')
+    sheet.update([['Корректировки']], 'M1')
+    sheet.format('M1:Q200', {
+        'wrapStrategy': 'WRAP',
+        'horizontalAlignment': 'CENTER',
+        'verticalAlignment': 'MIDDLE',
+    })
+
+    sheet.update([df.columns.values.tolist()] + df.values.tolist(), range_name='M2:Q200')
