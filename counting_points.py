@@ -52,7 +52,8 @@ def check_filled_projects(row: Series) -> bool:
     Если какие-то характеристики отсутствуют, подсчет невозможен.
     '''
     characteristics = ['Наименование объекта', 'Шифр (ИСП)',
-                       'Дата начала проекта', 'Дата окончания проекта',
+                       'Дата начала проекта',
+                    #    'Дата окончания проекта',
                        'Сложность']
     if 'блок-контейнер' in row['Тип объекта'].strip().lower():
         return True
@@ -91,7 +92,7 @@ def check_amount_directions(comp: int, amount: str) -> int:
 
 def define_square(square: str) -> float:
     '''
-    Подготавливает введенные данные для дальнейших вычислений.
+    Подготавливает введенные данные площади для дальнейших вычислений.
     '''
     try:
         square = float(square)
@@ -269,15 +270,24 @@ def check_spend_time(row: Series, points: int, df: DataFrame) -> int:
 
     try:
         start_date = dt.strptime(row['Дата начала проекта'], "%d.%m.%Y").date()         #TODO обновление пакета holidays на сервере
-        end_date = dt.strptime(row['Дата окончания проекта'], "%d.%m.%Y").date()
     except ValueError:
         return 'Некорректно введены даты.'
-
-    deadline = calculate_deadline(start_date, days_deadline)
     
-    if deadline < end_date:
-        points = points*coefficient
+    deadline = calculate_deadline(start_date, days_deadline)
+    deadline_str = deadline.strftime("%d.%m.%Y")
+    df.loc[df['Шифр (ИСП)'] == row['Шифр (ИСП)'], 'Дедлайн'] = deadline_str
+    
+    try:
+        end_date = dt.strptime(row['Дата окончания проекта'], "%d.%m.%Y").date()
+    except ValueError:
+        end_date = None
+        if row['Дата окончания проекта'] == '':
+            return f'{points} - предварительные баллы. Проект ещё не сдан.'
+        else:    
+            return 'Некорректно введены даты.'
 
-    deadline = deadline.strftime("%d.%m.%Y")
-    df.loc[df['Шифр (ИСП)'] == row['Шифр (ИСП)'], 'Дедлайн'] = deadline
+    if end_date:
+        if deadline < end_date:
+            points = points*coefficient
+
     return points
