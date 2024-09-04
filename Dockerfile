@@ -8,4 +8,4 @@ RUN pip install -r requirements.txt --no-cache-dir
 
 COPY . .
 
-CMD ["python", "program.py"]
+CMD ["python3", "program.py"]
