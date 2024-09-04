@@ -22,30 +22,47 @@ jobs:
         username: ${{ secrets.DOCKER_USERNAME }}
         password: ${{ secrets.DOCKER_PASSWORD }}
     
-    - name: Recreate creds.json file
+    - name: Recreate .env and creds.json file
       run: |
         echo "${{ secrets.CREDS_JSON }}" > creds.json
+        echo "${{ secrets.ENV }}" > .env
 
     - name: Build and push Docker image
-      run: |
-        docker build -t ${{ secrets.DOCKER_USERNAME }}/salary_bonus:latest .
-        docker push ${{ secrets.DOCKER_USERNAME }}/salary_bonus:latest
+      uses: docker/build-push-action@v4
+      with:
+        push: true
+        tags: ${{ secrets.DOCKER_USERNAME }}/salary_bonus:latest
+
 
   deploy:
     runs-on: ubuntu-latest
-    needs: build
-
+    needs:
+      - build
+    if: github.ref == 'refs/heads/main'
     steps:
-    - name: Set up SSH
-      uses: webfactory/ssh-agent@v0.5.3
+    - name: Checkout repo
+      uses: actions/checkout@v3
+    - name: Executing remote ssh commands to deploy
+      uses: appleboy/ssh-action@master
       with:
-        ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
+        host: ${{ secrets.HOST }}
+        username: ${{ secrets.USER }}
+        key: ${{ secrets.SSH_KEY }}
+        passphrase: ${{ secrets.SSH_PASSPHRASE }}
+        script_stop: true
+        script: |
+          sudo docker pull ${{ secrets.DOCKER_USERNAME }}/salary:latest
+          sudo docker stop salary_container
+          sudo docker rm salary_container
+          docker run -d --name salary_container ${{ secrets.DOCKER_USERNAME }}/salary:latest
 
-    - name: Deploy to Server
-      run: |
-        ssh -o StrictHostKeyChecking=no user@your_server << 'EOF'
-          docker pull ${{ secrets.DOCKER_USERNAME }}/your-python-app:latest
-          docker stop your_python_container || true
-          docker rm your_python_container || true
-          docker run -d --name your_python_container ${{ secrets.DOCKER_USERNAME }}/your-python-app:latest
-        EOF
+  send_message:
+    runs-on: ubuntu-latest
+    needs: deploy
+    steps:
+    - name: Send message
+      uses: appleboy/telegram-action@master
+      with:
+        to: ${{ secrets.TELEGRAM_TO }}
+        token: ${{ secrets.TELEGRAM_TOKEN }}
+        message: Деплой salary bonus успешно выполнен!
