@@ -30,3 +30,6 @@ creds.json
 
 # cfg
 setup.cfg
+
+# cron
+crontab

@@ -247,8 +247,8 @@ async def main():
             except gspread.exceptions.APIError as error:
                 await send_message(bot, 'Ошибка: слишком много запросов к API Google.')
                 raise TooManyRequestsApiError(error)
-            # except Exception as error:
-                # await send_message(bot, f'Ошибка: {error}')
+            except Exception as error:
+                await send_message(bot, f'Ошибка: {error}')
     
     await bot.session.close()
     
