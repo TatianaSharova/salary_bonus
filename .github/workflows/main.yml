@@ -56,7 +56,7 @@ jobs:
             sudo docker stop salary_container
             sudo docker rm salary_container
           fi
-          docker run -d --name salary_container ${{ secrets.DOCKER_USERNAME }}/salary_bonus:latest
+          sudo docker run -d --name salary_container ${{ secrets.DOCKER_USERNAME }}/salary_bonus:latest
           sudo docker image rm $(sudo docker image ls -f "dangling=true" -q)
 
   send_message:
