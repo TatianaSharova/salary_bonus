@@ -1,14 +1,12 @@
-import time
 import os
+import time
 from datetime import datetime as dt
 
 import gspread
-import pandas as pd
-from gspread.worksheet import Worksheet
 from gspread.spreadsheet import Spreadsheet
+from gspread.worksheet import Worksheet
 from gspread_formatting import *
 from pandas.core.frame import DataFrame
-from pandas.core.series import Series
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 creds_path = os.path.join(BASE_DIR, 'creds.json')

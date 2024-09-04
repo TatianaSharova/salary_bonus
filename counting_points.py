@@ -6,6 +6,8 @@ import pandas as pd
 from pandas.core.frame import DataFrame
 from pandas.core.series import Series
 
+from utils import count_block
+
 pd.options.mode.chained_assignment = None
 
 # def set_project_complexity(row: DataFrame) -> int:
@@ -291,3 +293,61 @@ def check_spend_time(row: Series, points: int, df: DataFrame) -> int:
             points = points*coefficient
 
     return points
+
+def count_points(row: Series, df: DataFrame, blocks: list) -> int:
+    '''
+    Считает и возвращает сумму полученных баллов.
+    Если подсчет произвести невозможно, то возвращает
+    строку-предупреждение об этом.
+    '''
+    points = 0
+    filled_project = check_filled_projects(row)
+    if not filled_project:
+        return 'Необходимо заполнить данные для расчёта'
+    if 'блок-контейнер' in row['Тип объекта'].strip().lower():
+        return count_block(row, blocks)
+    try:
+        complexity = int(row['Сложность'])
+    except ValueError:
+        return 'Сложность объекта заполнена некорректно'
+
+    points += check_amount_directions(complexity, row['Количество направлений'])
+    points += check_square(complexity, row)
+    points += check_sot_skud(row)
+    points += check_cultural_heritage(row)
+    points += check_net(row)
+    points = round(points/check_authors(row['Разработал']),1)
+    points = check_spend_time(row, points, df)
+
+    return points
+
+
+def count_adjusting_points(row: Series, engineer: str):
+    '''
+    Расчитывает баллы за корректировки: 0.3 от баллов за готовый проект.
+    Дедлайн для корректировок не считается.
+    '''
+    points = 0
+    filled_project = check_filled_projects(row)
+
+    if engineer in row['Разработал']:
+        return 'Баллы за корректировки своих проектов не расчитываются'
+
+    if not filled_project:
+        return 'Необходимо заполнить данные для расчёта'
+    if 'блок-контейнер' in row['Тип объекта'].strip().lower():
+        return 0.3
+    
+    try:
+        complexity = int(row['Сложность'])
+    except ValueError:
+        return 'Сложность объекта заполнена некорректно'
+
+    points += check_amount_directions(complexity, row['Количество направлений'])
+    points += check_square(complexity, row)
+    points += check_sot_skud(row)
+    points += check_cultural_heritage(row)
+    points += check_net(row)
+    points = round(points/check_authors(row['Корректировки']),1)
+
+    return points*0.3
