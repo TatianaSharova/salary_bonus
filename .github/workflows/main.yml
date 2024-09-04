@@ -51,10 +51,10 @@ jobs:
         passphrase: ${{ secrets.SSH_PASSPHRASE }}
         script_stop: true
         script: |
-          sudo docker pull ${{ secrets.DOCKER_USERNAME }}/salary:latest
+          sudo docker pull ${{ secrets.DOCKER_USERNAME }}/salary_bonus:latest
           sudo docker stop salary_container
           sudo docker rm salary_container
-          docker run -d --name salary_container ${{ secrets.DOCKER_USERNAME }}/salary:latest
+          docker run -d --name salary_container ${{ secrets.DOCKER_USERNAME }}/salary_bonus:latest
 
   send_message:
     runs-on: ubuntu-latest
