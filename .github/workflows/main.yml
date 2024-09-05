@@ -68,6 +68,9 @@ jobs:
         ls
         tar -cvf deploy.tar /home/runner/secrets/
         ls
+        cd /home/runner
+        pwd
+        ls
     
     - name: Test printing your secret (Remove this step in production)
       run: |
