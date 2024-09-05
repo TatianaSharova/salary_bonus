@@ -66,8 +66,10 @@ jobs:
       run: |
         pwd
         ls
+        mkdir ../build
+        cp /home/runner/secrets/* ../build
+        tar -cvf deploy.tar ../build/
         cd /home/runner
-        tar -cvf deploy.tar /home/runner/secrets/
         pwd
         ls
     
