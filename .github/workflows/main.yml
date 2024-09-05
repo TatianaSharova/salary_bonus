@@ -27,13 +27,16 @@ jobs:
       with:
         push: true
         tags: ${{ secrets.DOCKER_USERNAME }}/salary_bonus:latest
-  my-job:
-    name: My Job
+  creds:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+
+      - name: Give execution rights for the decrypt script
+        run: chmod +x ./decrypt_creds.sh
+
       - name: Decrypt creds.json
-        run: sudo decrypt_creds.sh
+        run: ./decrypt_creds.sh
         env:
           CREDS_JSON: ${{ secrets.CREDS_JSON }}
       # This command is just an example to show your secret being printed
@@ -47,6 +50,7 @@ jobs:
     runs-on: ubuntu-latest
     needs:
       - build
+      - creds
     if: github.ref == 'refs/heads/main'
     steps:
     - name: Checkout repo
