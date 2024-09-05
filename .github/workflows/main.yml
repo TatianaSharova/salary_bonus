@@ -35,6 +35,7 @@ jobs:
         CREDS_JSON: ${{ secrets.CREDS_JSON }}
 
     - name: Test printing your secret (Remove this step in production)
+    - uses: actions/checkout@v4
       run: cat $HOME/secrets/creds.json
 
 
