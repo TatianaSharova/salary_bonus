@@ -68,6 +68,13 @@ jobs:
         echo "${{ secrets.SSH_KEY }}" > ~/.ssh/id_ed25519
         chmod 600 ~/.ssh/id_ed25519
         ssh-keyscan ${{ secrets.HOST }} >> ~/.ssh/known_hosts
+        eval "$(ssh-agent -s)"
+        ssh-add ~/.ssh/id_ed25519
+      shell: bash
+    
+    - name: Debug SSH connection
+      run: |
+        ssh -vvv ${{ secrets.USER }}@${{ secrets.HOST }}
       shell: bash
     
     - name: Copy creds.json to remote server
