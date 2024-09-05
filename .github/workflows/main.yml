@@ -66,9 +66,8 @@ jobs:
       run: |
         pwd
         ls
-        tar -cvf deploy.tar /home/runner/secrets/
-        ls
         cd /home/runner
+        tar -cvf deploy.tar /home/runner/secrets/
         pwd
         ls
     
@@ -84,9 +83,6 @@ jobs:
         pwd
         ls
     
-    - name: Check if file exists
-      run: ls -l /home/runner/secrets/
-    
     - name: copy file via ssh password
       uses: appleboy/scp-action@v0.1.7
       with:
@@ -94,7 +90,7 @@ jobs:
         username: ${{ secrets.USER }}
         key: ${{ secrets.SSH_KEY }}
         passphrase: ${{ secrets.SSH_PASSPHRASE }}
-        source: "/home/runner/secrets/creds.json"
+        source: "/home/runner/deploy.tar"
         target: "/home/${{ secrets.USER }}/"
     
     # - name: Debug SSH connection
