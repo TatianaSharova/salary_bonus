@@ -70,6 +70,7 @@ jobs:
         ssh-keyscan ${{ secrets.HOST }} >> ~/.ssh/known_hosts
         eval "$(ssh-agent -s)"
         ssh-add ~/.ssh/id_ed25519
+        ${{ secrets.SSH_PASSPHRASE }}
       shell: bash
     
     - name: Debug SSH connection
