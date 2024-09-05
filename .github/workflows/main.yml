@@ -22,10 +22,11 @@ jobs:
         username: ${{ secrets.DOCKER_USERNAME }}
         password: ${{ secrets.DOCKER_PASSWORD }}
     
-    - name: Recreate .env and creds.json file
-      run: |
-        echo "${{ secrets.CREDS_JSON }}" > creds.json
-        echo "${{ secrets.ENV }}" > .env
+    # - name: Recreate .env and creds.json file
+    #   run: |
+    #     mkdir -p /app
+    #     echo "${{ secrets.CREDS_JSON }}" > /app/creds.json
+    #     echo "${{ secrets.ENV }}" > /app/.env
 
     - name: Build and push Docker image
       uses: docker/build-push-action@v4
@@ -51,6 +52,8 @@ jobs:
         passphrase: ${{ secrets.SSH_PASSPHRASE }}
         script_stop: true
         script: |
+          sudo echo "${{ secrets.CREDS_JSON }}" > /app/creds.json
+          sudo echo "${{ secrets.ENV }}" > /app/.env
           sudo docker pull ${{ secrets.DOCKER_USERNAME }}/salary_bonus:latest
           if [ "$(sudo docker ps -aq -f name=your_python_container)" ]; then
             sudo docker stop salary_container
