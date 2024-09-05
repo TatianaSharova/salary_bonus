@@ -105,6 +105,9 @@ jobs:
           sudo docker cp .env salary_container:/app/.env
 
           sudo docker image rm $(sudo docker image ls -f "dangling=true" -q)
+          sudo rm deploy.tar .env
+          sudo rm -r build/
+
 
   send_message:
     runs-on: ubuntu-latest

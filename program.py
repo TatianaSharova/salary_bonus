@@ -85,7 +85,7 @@ async def main():
 
                 await send_message(bot, 'Расчет баллов успешно выполнен.')
             except gspread.exceptions.APIError as error:
-                await send_message(bot, 'Ошибка: слишком много запросов к API Google.')
+                await send_message(bot, f'{error}')
                 raise TooManyRequestsApiError(error)
             except Exception as error:
                 await send_message(bot, f'Ошибка: {error}')
@@ -103,6 +103,8 @@ def setup_scheduler():
     scheduler.add_job(main, trigger='date', next_run_time=datetime.now()+timedelta(seconds=5))
 
     scheduler.add_job(main, trigger='cron', hour=10, minute=10)
+
+    scheduler.add_job(main, trigger='cron', hour=6, minute=10)
 
     scheduler.start()
 
