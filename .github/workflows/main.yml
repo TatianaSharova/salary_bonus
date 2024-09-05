@@ -54,6 +54,8 @@ jobs:
         script: |
           sudo echo "${{ secrets.CREDS_JSON }}" > creds.json
           sudo echo "${{ secrets.ENV }}" > .env
+          sudo sed -i '/DRONE_SSH_PREV_COMMAND_EXIT_CODE/d' .env
+          sudo sed -i '/DRONE_SSH_PREV_COMMAND_EXIT_CODE/d' creds.json
 
           sudo docker pull ${{ secrets.DOCKER_USERNAME }}/salary_bonus:latest
           if [ "$(sudo docker ps -aq -f name=your_python_container)" ]; then
