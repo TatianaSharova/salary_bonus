@@ -65,7 +65,6 @@ jobs:
           sudo docker cp creds.json salary_container:/app/creds.json
           sudo docker cp .env salary_container:/app/.env
 
-          rm creds.json .env
           sudo docker image rm $(sudo docker image ls -f "dangling=true" -q)
 
   send_message:
