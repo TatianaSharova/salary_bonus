@@ -27,16 +27,20 @@ jobs:
       with:
         push: true
         tags: ${{ secrets.DOCKER_USERNAME }}/salary_bonus:latest
-  
-    - name: Decrypt creds.json
-    - uses: actions/checkout@v4
-      run: ./decrypt_creds.sh
-      env:
-        CREDS_JSON: ${{ secrets.CREDS_JSON }}
-
-    - name: Test printing your secret (Remove this step in production)
-    - uses: actions/checkout@v4
-      run: cat $HOME/secrets/creds.json
+  my-job:
+    name: My Job
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Decrypt creds.json
+        run: ./decrypt_creds.sh
+        env:
+          CREDS_JSON: ${{ secrets.CREDS_JSON }}
+      # This command is just an example to show your secret being printed
+      # Ensure you remove any print statements of your secrets. GitHub does
+      # not hide secrets that use this workaround.
+      - name: Test printing your secret (Remove this step in production)
+        run: cat $HOME/secrets/creds.json
 
 
   deploy:
