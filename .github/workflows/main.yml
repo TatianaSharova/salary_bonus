@@ -48,8 +48,8 @@ jobs:
 
   deploy:
     runs-on: ubuntu-latest
-    # needs:
-    #   - build
+    needs:
+      - build
     if: github.ref == 'refs/heads/main'
     steps:
     - uses: actions/checkout@v4
@@ -62,29 +62,12 @@ jobs:
       env:
         CREDS_JSON: ${{ secrets.CREDS_JSON }}
     
-    - name: Run a multi-line script
+    - name: tar creds
       run: |
-        pwd
-        ls
         mkdir ../build
         cp /home/runner/secrets/* ../build
         tar -cvf deploy.tar ../build/
-        cd /home/runner
-        pwd
-        ls
-    
-    - name: Test printing your secret (Remove this step in production)
-      run: |
-        cat $HOME/secrets/creds.json
-        pwd
-        ls
-        cd $HOME
-        pwd
-        ls
-        cd /home/runner/secrets
-        pwd
-        ls
-    
+
     - name: copy file via ssh password
       uses: appleboy/scp-action@v0.1.7
       with:
@@ -94,17 +77,6 @@ jobs:
         passphrase: ${{ secrets.SSH_PASSPHRASE }}
         source: "deploy.tar"
         target: "/home/${{ secrets.USER }}/"
-    
-    # - name: Debug SSH connection
-    #   run: |
-    #     ssh -vvv ${{ secrets.USER }}@${{ secrets.HOST }}
-    #   shell: bash
-    
-    # - name: Copy creds.json to remote server
-    #   run: |
-    #     scp $HOME/secrets/creds.json ${{ secrets.USER }}@${{ secrets.HOST }}:/home/${{ secrets.USER }}/
-    #   env:
-    #     SSH_PRIVATE_KEY: ${{ secrets.SSH_KEY }}
 
     - name: Checkout repo
       uses: actions/checkout@v3
@@ -120,6 +92,8 @@ jobs:
           sudo echo "${{ secrets.ENV }}" > .env
           sudo sed -i '/DRONE_SSH_PREV_COMMAND_EXIT_CODE/d' .env
 
+          sudo tar -xvf deploy.tar
+
           sudo docker pull ${{ secrets.DOCKER_USERNAME }}/salary_bonus:latest
           if [ "$(sudo docker ps -aq -f name=your_python_container)" ]; then
             sudo docker stop salary_container
@@ -127,7 +101,7 @@ jobs:
           fi
 
           sudo docker run -d --name salary_container ${{ secrets.DOCKER_USERNAME }}/salary_bonus:latest
-          sudo docker cp creds.json salary_container:/app/creds.json
+          sudo docker cp /home/${{ secrets.USER }}/build/creds.json salary_container:/app/creds.json
           sudo docker cp .env salary_container:/app/.env
 
           sudo docker image rm $(sudo docker image ls -f "dangling=true" -q)
