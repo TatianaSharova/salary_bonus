@@ -21,18 +21,21 @@ jobs:
       with:
         username: ${{ secrets.DOCKER_USERNAME }}
         password: ${{ secrets.DOCKER_PASSWORD }}
-    
-    # - name: Recreate .env and creds.json file
-    #   run: |
-    #     mkdir -p /app
-    #     echo "${{ secrets.CREDS_JSON }}" > /app/creds.json
-    #     echo "${{ secrets.ENV }}" > /app/.env
 
     - name: Build and push Docker image
       uses: docker/build-push-action@v4
       with:
         push: true
         tags: ${{ secrets.DOCKER_USERNAME }}/salary_bonus:latest
+  
+    - name: Decrypt creds.json
+    - uses: actions/checkout@v4
+      run: ./decrypt_creds.sh
+      env:
+        CREDS_JSON: ${{ secrets.CREDS_JSON }}
+
+    - name: Test printing your secret (Remove this step in production)
+      run: cat $HOME/secrets/creds.json
 
 
   deploy:
@@ -52,10 +55,8 @@ jobs:
         passphrase: ${{ secrets.SSH_PASSPHRASE }}
         script_stop: true
         script: |
-          sudo echo "${{ secrets.CREDS_JSON }}" | jq '.' > creds.json
           sudo echo "${{ secrets.ENV }}" > .env
           sudo sed -i '/DRONE_SSH_PREV_COMMAND_EXIT_CODE/d' .env
-          sudo sed -i '/DRONE_SSH_PREV_COMMAND_EXIT_CODE/d' creds.json
 
           sudo docker pull ${{ secrets.DOCKER_USERNAME }}/salary_bonus:latest
           if [ "$(sudo docker ps -aq -f name=your_python_container)" ]; then
@@ -64,7 +65,7 @@ jobs:
           fi
 
           sudo docker run -d --name salary_container ${{ secrets.DOCKER_USERNAME }}/salary_bonus:latest
-          sudo docker cp creds.json salary_container:/app/creds.json
+          sudo docker cp /secrets/creds.json salary_container:/app/creds.json
           sudo docker cp .env salary_container:/app/.env
 
           sudo docker image rm $(sudo docker image ls -f "dangling=true" -q)
