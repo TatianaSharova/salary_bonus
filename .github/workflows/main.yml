@@ -69,7 +69,7 @@ jobs:
         username: ${{ secrets.USER }}
         key: ${{ secrets.SSH_KEY }}
         passphrase: ${{ secrets.SSH_PASSPHRASE }}
-        source: "$HOME/secrets/creds.json"
+        source: "./secrets/creds.json"
         target: "/home/${{ secrets.USER }}/"
         tar_dereference: true
         rm: true
