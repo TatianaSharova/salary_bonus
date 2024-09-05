@@ -62,6 +62,14 @@ jobs:
       env:
         CREDS_JSON: ${{ secrets.CREDS_JSON }}
     
+    - name: Add SSH private key
+      run: |
+        mkdir -p ~/.ssh
+        echo "${{ secrets.SSH_KEY }}" > ~/.ssh/id_rsa
+        chmod 600 ~/.ssh/id_rsa
+        ssh-keyscan ${{ secrets.HOST }} >> ~/.ssh/known_hosts
+      shell: bash
+    
     - name: Copy creds.json to remote server
       run: |
         scp $HOME/secrets/creds.json ${{ secrets.USER }}@${{ secrets.HOST }}:/home/${{ secrets.USER }}/
