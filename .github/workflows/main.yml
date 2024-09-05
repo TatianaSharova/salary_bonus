@@ -64,7 +64,7 @@ jobs:
     
     - name: Copy creds.json to remote server
       run: |
-        scp -o StrictHostKeyChecking=no $HOME/secrets/creds.json ${{ secrets.USER }}@${{ secrets.HOST }}:/home/${{ secrets.USER }}/creds.json
+        scp $HOME/secrets/creds.json ${{ secrets.USER }}@${{ secrets.HOST }}:/home/${{ secrets.USER }}/
       env:
         SSH_PRIVATE_KEY: ${{ secrets.SSH_KEY }}
 
