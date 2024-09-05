@@ -82,7 +82,7 @@ jobs:
         key: ${{ secrets.SSH_KEY }}
         passphrase: ${{ secrets.SSH_PASSPHRASE }}
         source: "/home/runner/secrets/*"
-        target: "/home/${{ secrets.USER }}/"
+        target: "."
     
     # - name: Debug SSH connection
     #   run: |
