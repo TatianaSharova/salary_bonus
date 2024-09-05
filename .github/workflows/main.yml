@@ -33,7 +33,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Decrypt creds.json
-        run: ./decrypt_creds.sh
+        run: sudo ./decrypt_creds.sh
         env:
           CREDS_JSON: ${{ secrets.CREDS_JSON }}
       # This command is just an example to show your secret being printed
