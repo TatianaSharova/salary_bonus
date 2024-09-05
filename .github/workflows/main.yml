@@ -62,13 +62,15 @@ jobs:
       env:
         CREDS_JSON: ${{ secrets.CREDS_JSON }}
     
-    - name: Add SSH private key
-      run: |
-        mkdir -p ~/.ssh
-        echo "${{ secrets.SSH_KEY }}" > ~/.ssh/id_ed25519
-        chmod 600 ~/.ssh/id_ed25519
-        ssh-keyscan ${{ secrets.HOST }} >> ~/.ssh/known_hosts
-      shell: bash
+    - name: copy file via ssh password
+      uses: appleboy/scp-action@v0.1.7
+      with:
+        host: ${{ secrets.HOST }}
+        username: ${{ secrets.USER }}
+        key: ${{ secrets.SSH_KEY }}
+        passphrase: ${{ secrets.SSH_PASSPHRASE }}
+        source: "$HOME/secrets/creds.json"
+        target: "/home/${{ secrets.USER }}/"
     
     - name: Debug SSH connection
       run: |
