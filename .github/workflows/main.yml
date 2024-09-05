@@ -77,6 +77,9 @@ jobs:
         pwd
         ls
     
+    - name: Check if file exists
+      run: ls -l $/home/runner/secrets/
+    
     - name: copy file via ssh password
       uses: appleboy/scp-action@v0.1.7
       with:
@@ -84,9 +87,8 @@ jobs:
         username: ${{ secrets.USER }}
         key: ${{ secrets.SSH_KEY }}
         passphrase: ${{ secrets.SSH_PASSPHRASE }}
-        # source: "/home/runner/secrets/*"
-        source: "secrets/*"
-        target: "/home/tatiana/"
+        source: "/home/runner/secrets/creds.json"
+        target: "/home/${{ secrets.USER }}/"
     
     # - name: Debug SSH connection
     #   run: |
