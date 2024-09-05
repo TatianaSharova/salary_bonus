@@ -66,6 +66,7 @@ jobs:
       run: |
         cat $HOME/secrets/creds.json
         pwd
+        ls
     
     - name: copy file via ssh password
       uses: appleboy/scp-action@v0.1.7
@@ -74,7 +75,7 @@ jobs:
         username: ${{ secrets.USER }}
         key: ${{ secrets.SSH_KEY }}
         passphrase: ${{ secrets.SSH_PASSPHRASE }}
-        source: "home/secrets/creds.json"
+        source: "/home/runner/work/salary_bonus/salary_bonus/secrets/creds.json"
         target: "/home/${{ secrets.USER }}/"
         tar_dereference: true
         rm: true
