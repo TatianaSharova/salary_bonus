@@ -52,8 +52,8 @@ jobs:
         passphrase: ${{ secrets.SSH_PASSPHRASE }}
         script_stop: true
         script: |
-          sudo echo "${{ secrets.CREDS_JSON }}" > /app/creds.json
-          sudo echo "${{ secrets.ENV }}" > /app/.env
+          sudo echo "${{ secrets.CREDS_JSON }}" > creds.json
+          sudo echo "${{ secrets.ENV }}" > .env
           sudo docker pull ${{ secrets.DOCKER_USERNAME }}/salary_bonus:latest
           if [ "$(sudo docker ps -aq -f name=your_python_container)" ]; then
             sudo docker stop salary_container
