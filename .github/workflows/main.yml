@@ -61,13 +61,17 @@ jobs:
       run: ./decrypt_creds.sh
       env:
         CREDS_JSON: ${{ secrets.CREDS_JSON }}
+    
+    - name: Copy creds.json to remote server
+      run: |
+        scp -o StrictHostKeyChecking=no $HOME/secrets/creds.json ${{ secrets.USER }}@${{ secrets.HOST }}:/home/${{ secrets.USER }}/creds.json
+      env:
+        SSH_PRIVATE_KEY: ${{ secrets.SSH_KEY }}
 
     - name: Checkout repo
       uses: actions/checkout@v3
     - name: Executing remote ssh commands to deploy
       uses: appleboy/ssh-action@master
-      env:
-        CREDS: $HOME/secrets/creds.json
       with:
         host: ${{ secrets.HOST }}
         username: ${{ secrets.USER }}
@@ -85,7 +89,7 @@ jobs:
           fi
 
           sudo docker run -d --name salary_container ${{ secrets.DOCKER_USERNAME }}/salary_bonus:latest
-          sudo docker cp ${{ env.CREDS }} salary_container:/app/creds.json
+          sudo docker cp creds.json salary_container:/app/creds.json
           sudo docker cp .env salary_container:/app/.env
 
           sudo docker image rm $(sudo docker image ls -f "dangling=true" -q)
