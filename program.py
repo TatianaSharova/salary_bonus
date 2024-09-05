@@ -1,5 +1,6 @@
 import asyncio
 import time
+from datetime import timedelta, datetime
 
 import aiogram
 import gspread
@@ -94,9 +95,12 @@ async def main():
 
 def setup_scheduler():
     '''
-    Запускает планировщик.
+    Запускает планировщик. Задача выполнится сразу после начала работы,
+    а потом будет выполняться каждый день в 10:10 утра.
     '''
     scheduler = AsyncIOScheduler()
+
+    scheduler.add_job(main, trigger='date', next_run_time=datetime.now()+timedelta(seconds=5))
 
     scheduler.add_job(main, trigger='cron', hour=10, minute=10)
 

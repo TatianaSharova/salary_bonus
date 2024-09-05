@@ -52,7 +52,7 @@ jobs:
         passphrase: ${{ secrets.SSH_PASSPHRASE }}
         script_stop: true
         script: |
-          sudo echo "${{ secrets.CREDS_JSON }}" > creds.json
+          sudo echo "${{ secrets.CREDS_JSON }}" | jq '.' > creds.json
           sudo echo "${{ secrets.ENV }}" > .env
           sudo sed -i '/DRONE_SSH_PREV_COMMAND_EXIT_CODE/d' .env
           sudo sed -i '/DRONE_SSH_PREV_COMMAND_EXIT_CODE/d' creds.json
