@@ -78,7 +78,7 @@ jobs:
         ls
     
     - name: Check if file exists
-      run: ls -l $/home/runner/secrets/
+      run: ls -l /home/runner/secrets/
     
     - name: copy file via ssh password
       uses: appleboy/scp-action@v0.1.7
