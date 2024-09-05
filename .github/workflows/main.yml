@@ -72,16 +72,16 @@ jobs:
         source: "$HOME/secrets/creds.json"
         target: "/home/${{ secrets.USER }}/"
     
-    - name: Debug SSH connection
-      run: |
-        ssh -vvv ${{ secrets.USER }}@${{ secrets.HOST }}
-      shell: bash
+    # - name: Debug SSH connection
+    #   run: |
+    #     ssh -vvv ${{ secrets.USER }}@${{ secrets.HOST }}
+    #   shell: bash
     
-    - name: Copy creds.json to remote server
-      run: |
-        scp $HOME/secrets/creds.json ${{ secrets.USER }}@${{ secrets.HOST }}:/home/${{ secrets.USER }}/
-      env:
-        SSH_PRIVATE_KEY: ${{ secrets.SSH_KEY }}
+    # - name: Copy creds.json to remote server
+    #   run: |
+    #     scp $HOME/secrets/creds.json ${{ secrets.USER }}@${{ secrets.HOST }}:/home/${{ secrets.USER }}/
+    #   env:
+    #     SSH_PRIVATE_KEY: ${{ secrets.SSH_KEY }}
 
     - name: Checkout repo
       uses: actions/checkout@v3
