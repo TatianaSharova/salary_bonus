@@ -62,6 +62,11 @@ jobs:
       env:
         CREDS_JSON: ${{ secrets.CREDS_JSON }}
     
+    - name: Test printing your secret (Remove this step in production)
+      run: |
+        cat $HOME/secrets/creds.json
+        pwd
+    
     - name: copy file via ssh password
       uses: appleboy/scp-action@v0.1.7
       with:
