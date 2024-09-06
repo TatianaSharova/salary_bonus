@@ -55,7 +55,6 @@ def check_filled_projects(row: Series) -> bool:
     '''
     characteristics = ['Наименование объекта', 'Шифр (ИСП)',
                        'Дата начала проекта',
-                    #    'Дата окончания проекта',
                        'Сложность']
     if 'блок-контейнер' in row['Тип объекта'].strip().lower():
         return True
@@ -237,29 +236,6 @@ def calculate_deadline(start_date: dt.date, work_days: int) -> dt.date:
     return current_date - timedelta(days=1)
 
 
-# def check_spend_time(row: DataFrame, points: int) -> int:
-#     '''
-#     Проверка на соблюдение дэдлайнов проекта.
-#     Если проект выполнен в срок из расчета 1 балл = 5 рабочим дням,
-#     остаются те же баллы. Если дэдлайн был просрочен, полученные
-#     баллы умножаются на понижающий коэффициент.
-#     '''
-#     coefficient = 0.9                                               #TODO определить понижающий коэффициент за просрочку дэдлайна
-#     days_deadline = points*5
-
-#     start_date = dt.strptime(row['Дата начала проекта'], "%d.%m.%Y").date()         #TODO обновление пакета holidays на сервере
-#     end_date = dt.strptime(row['Дата окончания проекта'], "%d.%m.%Y").date()
-
-#     spend_time_including_holidays = (end_date - start_date).days + 1
-#     holidays_amount = count_non_working_days(start_date, end_date)
-#     spend_working_time = spend_time_including_holidays - holidays_amount
-    
-#     if spend_working_time <= days_deadline:
-#         return points
-#     else:
-#         return points*coefficient
-
-
 def check_spend_time(row: Series, points: int, df: DataFrame) -> int:
     '''
     Проверка на соблюдение дэдлайнов проекта.
@@ -267,7 +243,7 @@ def check_spend_time(row: Series, points: int, df: DataFrame) -> int:
     остаются те же баллы. Если дедлайн был просрочен, полученные
     баллы умножаются на понижающий коэффициент.
     '''
-    coefficient = 0.9                                               #TODO определить понижающий коэффициент за просрочку дэдлайна
+    coefficient = 0.9
     days_deadline = points*5
 
     try:
@@ -324,7 +300,7 @@ def count_points(row: Series, df: DataFrame, blocks: list) -> int:
 
 def count_adjusting_points(row: Series, engineer: str):
     '''
-    Расчитывает баллы за корректировки: 0.3 от баллов за готовый проект.
+    Расчитывает баллы за корректировки: 30 процентов от баллов за готовый проект.
     Дедлайн для корректировок не считается.
     '''
     points = 0

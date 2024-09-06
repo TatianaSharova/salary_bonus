@@ -1,6 +1,6 @@
 import asyncio
 import time
-from datetime import timedelta, datetime
+from datetime import datetime, timedelta
 
 import aiogram
 import gspread
@@ -9,6 +9,7 @@ from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from gspread.worksheet import Worksheet
 from gspread_formatting import *
 from pandas.core.frame import DataFrame
+from pytz import timezone
 
 from counting_points import count_adjusting_points, count_points
 from exceptions import TooManyRequestsApiError
@@ -103,11 +104,13 @@ def setup_scheduler():
     '''
     scheduler = AsyncIOScheduler(timezone='Asia/Dubai')
 
-    scheduler.add_job(main, trigger='date', next_run_time=datetime.now()+timedelta(seconds=5))
+    samara_tz = timezone('Asia/Dubai')
+
+    scheduler.add_job(main, trigger='date',
+                      next_run_time=datetime.now(samara_tz)+timedelta(seconds=5),
+                      misfire_grace_time=3600)
 
     scheduler.add_job(main, trigger='cron', hour=10, minute=10)
-
-    scheduler.add_job(main, trigger='cron', hour=8, minute=10)
 
     scheduler.start()
 
