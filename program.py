@@ -67,6 +67,9 @@ def process_data(engineers: list[str], df: DataFrame) -> None:
         
 
 async def main():
+    '''
+    Запускает и завершает работу программы.
+    '''
     bot = aiogram.Bot(token=TELEGRAM_TOKEN)
     
     try:
@@ -98,13 +101,13 @@ def setup_scheduler():
     Запускает планировщик. Задача выполнится сразу после начала работы,
     а потом будет выполняться каждый день в 10:10 утра.
     '''
-    scheduler = AsyncIOScheduler()
+    scheduler = AsyncIOScheduler(timezone='Asia/Dubai')
 
     scheduler.add_job(main, trigger='date', next_run_time=datetime.now()+timedelta(seconds=5))
 
     scheduler.add_job(main, trigger='cron', hour=10, minute=10)
 
-    scheduler.add_job(main, trigger='cron', hour=6, minute=10)
+    scheduler.add_job(main, trigger='cron', hour=8, minute=10)
 
     scheduler.start()
 
