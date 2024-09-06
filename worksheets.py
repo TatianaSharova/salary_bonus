@@ -7,10 +7,16 @@ from gspread.spreadsheet import Spreadsheet
 from gspread.worksheet import Worksheet
 from gspread_formatting import *
 from pandas.core.frame import DataFrame
-from utils import EMAIL
+from dotenv import load_dotenv
+
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 creds_path = os.path.join(BASE_DIR, 'creds.json')
+env_path = os.path.join(BASE_DIR, '.env')
+load_dotenv(dotenv_path=env_path)
+
+EMAIL = os.getenv('EMAIL')
+
 gc = gspread.service_account(filename=creds_path)
 
 
