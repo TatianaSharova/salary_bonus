@@ -7,10 +7,10 @@ from gspread.spreadsheet import Spreadsheet
 from gspread.worksheet import Worksheet
 from gspread_formatting import *
 from pandas.core.frame import DataFrame
+from utils import EMAIL
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 creds_path = os.path.join(BASE_DIR, 'creds.json')
-env_path = os.path.join(BASE_DIR, '.env')
 gc = gspread.service_account(filename=creds_path)
 
 
@@ -97,7 +97,7 @@ def connect_to_bonus_ws() -> Spreadsheet:
         spreadsheet = gc.open(f'Премирование{dt.now().year}')
     except gspread.exceptions.SpreadsheetNotFound:
         spreadsheet = gc.create(f'Премирование{dt.now().year}')
-        spreadsheet.share('kroxxatt@gmail.com', perm_type='user', role='writer', notify=True)        #TODO с кем шерить доступ
+        spreadsheet.share(EMAIL, perm_type='user', role='writer', notify=True)        #TODO с кем шерить доступ
         worksheet = add_settings_ws(spreadsheet)
 
     return spreadsheet

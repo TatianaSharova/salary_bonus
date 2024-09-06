@@ -21,6 +21,7 @@ load_dotenv(dotenv_path=env_path)
 
 TELEGRAM_CHAT_ID = os.getenv('TELEGRAM_CHAT_ID')
 TELEGRAM_TOKEN = os.getenv('TELEGRAM_TOKEN')
+EMAIL = os.getenv('EMAIL')
 
 
 async def send_message(bot: aiogram.Bot, message: str):
