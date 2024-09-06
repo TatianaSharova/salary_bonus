@@ -27,24 +27,6 @@ jobs:
       with:
         push: true
         tags: ${{ secrets.DOCKER_USERNAME }}/salary_bonus:latest
-  # creds:
-  #   runs-on: ubuntu-latest
-  #   steps:
-  #     - uses: actions/checkout@v4
-
-  #     - name: Give execution rights for the decrypt script
-  #       run: chmod +x ./decrypt_creds.sh
-
-  #     - name: Decrypt creds.json
-  #       run: ./decrypt_creds.sh
-  #       env:
-  #         CREDS_JSON: ${{ secrets.CREDS_JSON }}
-  #     # This command is just an example to show your secret being printed
-  #     # Ensure you remove any print statements of your secrets. GitHub does
-  #     # not hide secrets that use this workaround.
-  #     - name: Test printing your secret (Remove this step in production)
-  #       run: cat $HOME/secrets/creds.json
-
 
   deploy:
     runs-on: ubuntu-latest
