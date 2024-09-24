@@ -154,7 +154,7 @@ def create_engineer_ws(spreadsheet: Spreadsheet, engineer: str) -> Worksheet:
 
     set_column_widths(sheet, [('A', 100), ('B', 400), ('C', 200), ('D:G', 150)])
 
-    sheet.format('A1:H1', {
+    sheet.format('A1:J1', {
         'backgroundColor': {
         'red': 0.7,
         'green': 1.0,
@@ -164,12 +164,12 @@ def create_engineer_ws(spreadsheet: Spreadsheet, engineer: str) -> Worksheet:
             'bold': True
         }
     })
-    sheet.format('A1:K200', {
+    sheet.format('A1:N200', {
         'wrapStrategy': 'WRAP',
         'horizontalAlignment': 'CENTER',
         'verticalAlignment': 'MIDDLE',
     })
-    sheet.format('J1:K1', {
+    sheet.format('L1:N1', {
         'backgroundColor': {
             'red': 0.8,
             'green': 0.9,
@@ -198,11 +198,11 @@ def send_project_data_to_spreadsheet(df: DataFrame, engineer: str) -> Worksheet:
         sheet = create_engineer_ws(spreadsheet, engineer)
     
 
-    # sheet.clear()
+    sheet.clear()
 
     
     eng_small = df[['Страна', 'Наименование объекта', 'Шифр (ИСП)', 'Разработал', 'Баллы',
-                    'Дата начала проекта', 'Дата окончания проекта', 'Дедлайн']]
+                    'Дата начала проекта', 'Дата окончания проекта', 'Дедлайн', 'Сложность', 'Сложность2']]
     
     sheet.update([eng_small.columns.values.tolist()] + eng_small.values.tolist())
 
@@ -223,7 +223,7 @@ def send_quarter_data_to_spreadsheet(df: DataFrame,
         sheet = create_engineer_ws(spreadsheet, engineer)
 
 
-    sheet.update([df.columns.values.tolist()] + df.values.tolist(), range_name='J1:K200')
+    sheet.update([df.columns.values.tolist()] + df.values.tolist(), range_name='L1:N200')
 
 
 def send_adj_data_to_spreadsheet(df: DataFrame,

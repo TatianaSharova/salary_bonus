@@ -11,6 +11,7 @@ from gspread_formatting import *
 from pandas.core.frame import DataFrame
 from pytz import timezone
 
+from complexity import set_project_complexity
 from counting_points import count_adjusting_points, count_points
 from exceptions import TooManyRequestsApiError
 from quaterly_points import calculate_quarter
@@ -48,6 +49,7 @@ def process_data(engineers: list[str], df: DataFrame) -> None:
         engineer_projects = df.loc[df['Разработал'].str.contains(f'{engineer}')].reset_index(drop=True)
         engineer_projects["Дедлайн"] = ''
         blocks = []
+        engineer_projects["Сложность2"] = engineer_projects.apply(set_project_complexity, axis=1)
         engineer_projects["Баллы"] = engineer_projects.apply(count_points, axis=1, args=(engineer_projects, blocks))
         send_project_data_to_spreadsheet(engineer_projects, engineer)
 
@@ -99,7 +101,7 @@ async def main():
 
 def setup_scheduler():
     '''
-    Запускает планировщик. Задача выполнится сразу после начала работы,
+    Запускает планировщик. Задача выполнится сразу после запуска,
     а потом будет выполняться каждый день в 10:10 утра.
     '''
     scheduler = AsyncIOScheduler(timezone='Asia/Dubai')
@@ -108,9 +110,10 @@ def setup_scheduler():
 
     scheduler.add_job(main, trigger='date',
                       next_run_time=datetime.now(samara_tz)+timedelta(seconds=5),
-                      misfire_grace_time=3600)
+                      misfire_grace_time=120)
 
-    scheduler.add_job(main, trigger='cron', hour=10, minute=10)
+    scheduler.add_job(main, trigger='cron', hour=10, minute=10,
+                      misfire_grace_time=60)
 
     scheduler.start()
 
