@@ -152,8 +152,9 @@ def create_engineer_ws(spreadsheet: Spreadsheet, engineer: str) -> Worksheet:
     '''
     sheet = spreadsheet.add_worksheet(title=f'{engineer}', rows=200, cols=20)
 
-    set_column_widths(sheet, [('A', 100), ('B', 400), ('C', 200), ('D:G', 150)])
-
+    set_column_widths(sheet, [('A', 100), ('B', 400), ('C', 200), ('D:G', 150),
+                              ('I:J', 150)])
+    sheet.update([['Корректировка сложности']], 'J1')
     sheet.format('A1:J1', {
         'backgroundColor': {
         'red': 0.7,
@@ -164,7 +165,7 @@ def create_engineer_ws(spreadsheet: Spreadsheet, engineer: str) -> Worksheet:
             'bold': True
         }
     })
-    sheet.format('A1:N200', {
+    sheet.format('A1:T200', {
         'wrapStrategy': 'WRAP',
         'horizontalAlignment': 'CENTER',
         'verticalAlignment': 'MIDDLE',
@@ -198,11 +199,12 @@ def send_project_data_to_spreadsheet(df: DataFrame, engineer: str) -> Worksheet:
         sheet = create_engineer_ws(spreadsheet, engineer)
     
 
-    sheet.clear()
+    # sheet.clear()
 
     
     eng_small = df[['Страна', 'Наименование объекта', 'Шифр (ИСП)', 'Разработал', 'Баллы',
-                    'Дата начала проекта', 'Дата окончания проекта', 'Дедлайн', 'Сложность', 'Сложность2']]
+                    'Дата начала проекта', 'Дата окончания проекта', 'Дедлайн',
+                     'Автоматически определенная сложность']]
     
     sheet.update([eng_small.columns.values.tolist()] + eng_small.values.tolist())
 
@@ -240,12 +242,7 @@ def send_adj_data_to_spreadsheet(df: DataFrame,
 
 
     
-    sheet.merge_cells('M1:Q1')
-    sheet.update([['Корректировки']], 'M1')
-    sheet.format('M1:Q200', {
-        'wrapStrategy': 'WRAP',
-        'horizontalAlignment': 'CENTER',
-        'verticalAlignment': 'MIDDLE',
-    })
+    sheet.merge_cells('P1:T1')
+    sheet.update([['Корректировки']], 'P1')
 
     sheet.update([df.columns.values.tolist()] + df.values.tolist(), range_name='M2:Q200')

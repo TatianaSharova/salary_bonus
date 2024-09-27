@@ -49,7 +49,7 @@ def process_data(engineers: list[str], df: DataFrame) -> None:
         engineer_projects = df.loc[df['Разработал'].str.contains(f'{engineer}')].reset_index(drop=True)
         engineer_projects["Дедлайн"] = ''
         blocks = []
-        engineer_projects["Сложность2"] = engineer_projects.apply(set_project_complexity, axis=1)
+        engineer_projects["Автоматически определенная сложность"] = engineer_projects.apply(set_project_complexity, axis=1)
         engineer_projects["Баллы"] = engineer_projects.apply(count_points, axis=1, args=(engineer_projects, blocks))
         send_project_data_to_spreadsheet(engineer_projects, engineer)
 
@@ -93,8 +93,8 @@ async def main():
             except gspread.exceptions.APIError as error:
                 await send_message(bot, f'{error}')
                 raise TooManyRequestsApiError(error)
-            except Exception as error:
-                await send_message(bot, f'Ошибка: {error}')
+            # except Exception as error:
+            #     await send_message(bot, f'Ошибка: {error}')
     
     await bot.session.close()
 
