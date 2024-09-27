@@ -10,43 +10,6 @@ from utils import count_block
 
 pd.options.mode.chained_assignment = None
 
-# def set_project_complexity(row: DataFrame) -> int:
-#     '''
-#     Устанавливает сложность объекта.
-#     Сложность расчитывается от 1 до 5.
-#     '''
-#     first_type = ['блок-контейнер', 'контейнер', 'школа', 'больница', 'поликлин']
-#     second_type = ['адм. здание', 'административное здание', 'медицинские учреждения']
-#     third_type = ['производственное здание', 'пром. предприятие', 'выставка', 'музей', 'цгс']
-#     fourth_type = ['цод','производственное здание', 'пром. предприятие']
-#     fifth_type = ['цод','производственное здание', 'пром. предприятие']
-#     for type in first_type:
-#         if type in row['Тип объекта'].strip().lower():
-#             return 1
-#     for type in second_type:
-#         if type in row['Тип объекта'].strip().lower():
-#             return 2
-#     for type in third_type:
-#         if type in row['Тип объекта'].strip().lower():
-#             if (int(row['Количество направлений']) <= 8) or (
-#                 row['Тип объекта'].strip().lower() in ['выставка', 'музей']):
-#                 return 3
-#             else:
-#                 return 4
-#     for type in fourth_type:
-#         if type in row['Тип объекта'].strip().lower():
-#             if int(row['Площадь защищаемых помещений (м^2)']) < 500:
-#                 return 4
-#             else:
-#                 return 5
-    
-#     if int(row['Количество направлений']) <= 8:
-#         return 3
-#     elif int(row['Площадь защищаемых помещений (м^2)']) < 500:
-#         return 4
-#     else:
-#         return 5
-
 
 def check_filled_projects(row: Series) -> bool:
     '''
@@ -54,8 +17,7 @@ def check_filled_projects(row: Series) -> bool:
     Если какие-то характеристики отсутствуют, подсчет невозможен.
     '''
     characteristics = ['Наименование объекта', 'Шифр (ИСП)',
-                       'Дата начала проекта',
-                       'Сложность']
+                       'Тип объекта', 'Дата начала проекта']
     if 'блок-контейнер' in row['Тип объекта'].strip().lower():
         return True
     for char in characteristics:
@@ -282,10 +244,13 @@ def count_points(row: Series, df: DataFrame, blocks: list) -> int:
         return 'Необходимо заполнить данные для расчёта'
     if 'блок-контейнер' in row['Тип объекта'].strip().lower():
         return count_block(row, blocks)
-    try:
-        complexity = int(row['Сложность'])
-    except ValueError:
-        return 'Сложность объекта заполнена некорректно'
+    
+    # try:
+    #     complexity = int(row['Сложность'])
+    # except ValueError:
+    #     return 'Сложность объекта заполнена некорректно'
+
+    complexity = row['Автоматически определенная сложность']
 
     points += check_amount_directions(complexity, row['Количество направлений'])
     points += check_square(complexity, row)
