@@ -65,7 +65,6 @@ def process_data(engineers: list[str], df: DataFrame) -> None:
     '''
     for engineer in engineers:
         blocks = []
-        engineer = 'Фокина'
         print(engineer)
         engineer_projects = df.loc[df['Разработал'].str.contains(f'{engineer}')].reset_index(drop=True)
         engineer_projects["Дедлайн"] = ''
