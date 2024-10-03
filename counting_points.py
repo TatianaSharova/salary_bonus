@@ -164,36 +164,23 @@ def check_authors(authors: str) -> int:
         return 1
 
 
-def count_non_working_days(start_date: dt.date, end_date: dt.date) -> int:
-    '''Считает количество нерабочих дней в заданном промежутке.'''
-    if start_date > end_date:
-        start_date, end_date = end_date, start_date
-    
-    ru_holidays = holidays.RU(years=range(start_date.year, end_date.year + 1))
-
-    non_working_days = 0
-
-
-    current_date = start_date
-    while current_date <= end_date:
-        if current_date.weekday() >= 5 or current_date in ru_holidays:
-            non_working_days += 1
-        current_date += timedelta(days=1)
-    
-    return non_working_days
-
-
-def calculate_deadline(start_date: dt.date, work_days: int) -> dt.date:
+def calculate_deadline(start_date: dt.date, work_days: int, row: Series) -> dt.date:
     '''Расчитывает дату дедлайна, исходя из
     даты начала и количества рабочих дней.'''
     current_date = start_date
     days_added = 0
     ru_holidays = holidays.RU()
-    
+
     while days_added < work_days:
         if current_date.weekday() < 5 and current_date not in ru_holidays:
             days_added += 1
         current_date += timedelta(days=1)
+    
+    try:
+        plus_days = int(row['Продление дедлайна'])
+        current_date += timedelta(days=plus_days)
+    except ValueError:
+        plus_days = 0
     
     return current_date - timedelta(days=1)
 
@@ -213,7 +200,7 @@ def check_spend_time(row: Series, points: int, df: DataFrame) -> int:
     except ValueError:
         return 'Некорректно введены даты.'
     
-    deadline = calculate_deadline(start_date, days_deadline)
+    deadline = calculate_deadline(start_date, days_deadline, row)
     deadline_str = deadline.strftime("%d.%m.%Y")
     df.loc[df['Шифр (ИСП)'] == row['Шифр (ИСП)'], 'Дедлайн'] = deadline_str
     
@@ -244,13 +231,9 @@ def count_points(row: Series, df: DataFrame, blocks: list) -> int:
         return 'Необходимо заполнить данные для расчёта'
     if 'блок-контейнер' in row['Тип объекта'].strip().lower():
         return count_block(row, blocks)
-    
-    # try:
-    #     complexity = int(row['Сложность'])
-    # except ValueError:
-    #     return 'Сложность объекта заполнена некорректно'
 
-    complexity = row['Автоматически определенная сложность']
+
+    complexity = int(row['Сложность для расчета'])
 
     points += check_amount_directions(complexity, row['Количество направлений'])
     points += check_square(complexity, row)
