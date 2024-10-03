@@ -1,6 +1,6 @@
-from pandas.core.frame import DataFrame
+from pandas.core.series import Series
 
-def count_sections(row):
+def count_sections(row: Series):
     '''Считает количество разделов.'''
     count = 0
 
@@ -16,20 +16,20 @@ def count_sections(row):
     return count
 
 
-def imperator(row) -> bool:
+def imperator(row: Series) -> bool:
     '''Объекты с трубной разводкой.'''
     if 'Император' in row['Тип оборудования  пожаротушения (Заря/Император)']:
         return True
     return False
 
-def count_types(row) -> int:
+def count_types(row: Series) -> int:
     '''Считает количество типов оборудования в проекте.'''
     module_types = row['Тип оборудования  пожаротушения (Заря/Император)'].split(',')
     count = len(module_types)
     return count
 
 
-def count_modules(row) -> int:
+def count_modules(row: Series) -> int:
     modules = row['Количество модулей'].strip()
     try:
         count = int(modules)
@@ -50,7 +50,7 @@ def count_modules(row) -> int:
             return None
     return count
 
-def count_amount_directions_modules(row) ->int:
+def count_amount_directions_modules(row: Series) ->int:
     amount_dirs = row['Количество направлений'].strip()
     try:
         amount_dirs = int(amount_dirs)
@@ -65,7 +65,7 @@ def count_amount_directions_modules(row) ->int:
 
 
 
-def set_project_complexity(row: DataFrame) -> int:
+def set_project_complexity(row: Series) -> int:
     '''
     Устанавливает сложность объекта.
     Сложность расчитывается от 1 до 5.
@@ -79,14 +79,11 @@ def set_project_complexity(row: DataFrame) -> int:
     amount_dirs = count_amount_directions_modules(row)
 
 
-    # if row['Наименование объекта'] == ' ГТУ в АО «ОДК-Сервис»':
-    #     print(amount_dirs, has_imperator, amount_types)
-
     first_type = ['блок-контейнер', 'контейнер', 'школа', 'больница', 'поликлин', 'медицинские учреждения',
                   'мед. учрежд', 'цгс', 'отделение', 'комиссариат', 'гараж']
     second_type = ['адм. здание', 'административное здание', 'жк', 'суд', 'универ']
     third_type = ['производственное здание', 'пром. предприятие', 'выставка', 'музей', 'нии', 'завод',
-                  'модульная станция', 'станция']
+                  'модульная станция', 'станция', 'фок']
     fourth_type = ['цод','производственное здание', 'пром. предприятие']
 
     for type in first_type:
@@ -109,7 +106,6 @@ def set_project_complexity(row: DataFrame) -> int:
             ):
                 return 5
             if (amount_dirs > 8
-                or row['Тип оборудования  пожаротушения (Заря/Император)'] == 'ИСТА'
                 or has_imperator == True
             ):
                 return 4
@@ -125,11 +121,12 @@ def set_project_complexity(row: DataFrame) -> int:
     
     if amount_dirs <= 4:
         return 2
-    if amount_dirs <= 15:
+    if amount_dirs < 12:
         return 3
-    # elif  amount_types > 1 or amount_sections > 1:
-    #     return 4
-    elif amount_sections > 0 or has_imperator == True:
+    if amount_dirs >=20:
+        return 5
+    if (amount_dirs >= 12
+    or amount_sections > 0 or has_imperator == True):
         return 4
     else:
         return 3
