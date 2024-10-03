@@ -17,6 +17,7 @@ from exceptions import TooManyRequestsApiError
 from quaterly_points import calculate_quarter
 from utils import TELEGRAM_TOKEN, get_list_of_engineers, is_point, send_message
 from worksheets import (connect_to_project_archive,
+                        connect_to_engineer_ws,
                         send_adj_data_to_spreadsheet,
                         send_project_data_to_spreadsheet,
                         send_quarter_data_to_spreadsheet)
@@ -39,17 +40,40 @@ def process_adjusting_data(df: DataFrame) -> Worksheet:
             send_adj_data_to_spreadsheet(adjusting_projects_small, engineer)
 
 
+def correct_complexity(engineer: str, engineer_projects: DataFrame) -> DataFrame:
+    '''
+    Берёт данные о корректировке сложности из таблицы проектировщика.
+    '''
+    worksheet = connect_to_engineer_ws(engineer)
+
+    if worksheet:
+        raw_data = worksheet.get("J1:J200")
+        new_coplexity = pd.DataFrame(raw_data[1:], columns=raw_data[0])
+        if not new_coplexity.empty:
+            engineer_projects['Корректировка сложности'] = new_coplexity['Корректировка сложности']
+            if 'Корректировка сложности' in engineer_projects.columns:
+                engineer_projects['Сложность для расчета'] = engineer_projects[
+                    'Корректировка сложности'
+                ].combine_first(engineer_projects['Сложность для расчета'])               
+    return engineer_projects
+
+
 def process_data(engineers: list[str], df: DataFrame) -> None:
     '''
     Собирает данные из архива проектов, производит расчет баллов
     и отправляет полученные данные в таблицу "Премирование".
     '''
     for engineer in engineers:
+        blocks = []
+        engineer = 'Фокина'
         print(engineer)
         engineer_projects = df.loc[df['Разработал'].str.contains(f'{engineer}')].reset_index(drop=True)
         engineer_projects["Дедлайн"] = ''
-        blocks = []
         engineer_projects["Автоматически определенная сложность"] = engineer_projects.apply(set_project_complexity, axis=1)
+        engineer_projects["Сложность для расчета"] = engineer_projects["Автоматически определенная сложность"]
+
+        engineer_projects = correct_complexity(engineer, engineer_projects)
+
         engineer_projects["Баллы"] = engineer_projects.apply(count_points, axis=1, args=(engineer_projects, blocks))
         send_project_data_to_spreadsheet(engineer_projects, engineer)
 
@@ -67,7 +91,7 @@ def process_data(engineers: list[str], df: DataFrame) -> None:
         time.sleep(20)
     
     process_adjusting_data(df)
-        
+    
 
 async def main():
     '''
@@ -93,8 +117,8 @@ async def main():
             except gspread.exceptions.APIError as error:
                 await send_message(bot, f'{error}')
                 raise TooManyRequestsApiError(error)
-            # except Exception as error:
-            #     await send_message(bot, f'Ошибка: {error}')
+            except Exception as error:
+                await send_message(bot, f'Ошибка: {error}')
     
     await bot.session.close()
 

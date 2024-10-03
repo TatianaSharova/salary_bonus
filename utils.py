@@ -1,6 +1,9 @@
 import os
+from datetime import datetime as dt
+from datetime import timedelta
 
 import aiogram
+import holidays
 import pandas as pd
 from aiogram.exceptions import TelegramAPIError
 from dotenv import load_dotenv
@@ -102,3 +105,22 @@ def is_point(s: str) -> bool:
         return True
     except ValueError:
         return False
+
+
+def count_non_working_days(start_date: dt.date, end_date: dt.date) -> int:
+    '''Считает количество нерабочих дней в заданном промежутке.'''
+    if start_date > end_date:
+        start_date, end_date = end_date, start_date
+    
+    ru_holidays = holidays.RU(years=range(start_date.year, end_date.year + 1))
+
+    non_working_days = 0
+
+
+    current_date = start_date
+    while current_date <= end_date:
+        if current_date.weekday() >= 5 or current_date in ru_holidays:
+            non_working_days += 1
+        current_date += timedelta(days=1)
+    
+    return non_working_days

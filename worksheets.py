@@ -109,6 +109,19 @@ def connect_to_bonus_ws() -> Spreadsheet:
     return spreadsheet
 
 
+def connect_to_engineer_ws(engineer: str) -> Worksheet:
+    '''Открывает лист проектировщика.'''
+    spreadsheet = connect_to_bonus_ws()
+
+    try:
+        sheet = spreadsheet.worksheet(f'{engineer}')
+    except gspread.exceptions.WorksheetNotFound:
+        return None
+    
+    return sheet
+
+
+
 def connect_to_settings_ws() -> Worksheet:
     '''Открывает лист "Настройки" из таблицы "Премирование".'''
     sheet = connect_to_bonus_ws()
@@ -144,6 +157,29 @@ def color_overdue_deadline(df: DataFrame, sheet: Worksheet) -> Worksheet:
                     'blue': 0.8
                     },
             })
+
+
+def color_comp_correction(df: DataFrame, sheet: Worksheet) -> Worksheet:
+    '''Окрашивает ячейки с учтенной коррекцией сложности.'''
+    sheet.format('J2:J200', {
+        'backgroundColor': {
+            'red': 1,
+            'green': 1,
+            'blue': 1
+        },
+    })
+    if 'Корректировка сложности' in df.columns:
+        for index, row in df.iterrows():
+            if (row['Корректировка сложности']
+                and isinstance(row['Корректировка сложности'], str)
+                and row['Корректировка сложности'].isdigit()):
+                sheet.format(f'J{index + 2}', {
+                    'backgroundColor': {
+                        'red': 1,
+                        'green': 1,
+                        'blue': 0.8
+                        },
+                })
 
 
 def create_engineer_ws(spreadsheet: Spreadsheet, engineer: str) -> Worksheet:
@@ -209,6 +245,7 @@ def send_project_data_to_spreadsheet(df: DataFrame, engineer: str) -> Worksheet:
     sheet.update([eng_small.columns.values.tolist()] + eng_small.values.tolist())
 
     color_overdue_deadline(eng_small, sheet)
+    color_comp_correction(df, sheet)
 
 
 def send_quarter_data_to_spreadsheet(df: DataFrame,
