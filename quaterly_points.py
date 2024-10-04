@@ -1,6 +1,7 @@
 import pandas as pd
 from pandas.core.frame import DataFrame
 from pandas.core.indexes.period import PeriodIndex
+from datetime import datetime as dt
 
 TARGET = 12
 
@@ -90,6 +91,7 @@ def calculate_quarter(df: DataFrame) -> DataFrame:
     result['Квартал'] = result['Квартал'].apply(
         lambda x: f"{x.quarter}-{x.year}"
         )
+    result = result[result['Квартал'].str.contains(f'{dt.now().year}')]
     result['Премиальные баллы'] = result.apply(bonus_points, axis=1)
     
 

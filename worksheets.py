@@ -133,6 +133,15 @@ def connect_to_settings_ws() -> Worksheet:
     return settings
 
 
+def send_results_data_ws(df: DataFrame) -> Worksheet:
+    '''Отправляет данные о средних баллах на лист "Настройки".'''
+    worksheet = connect_to_settings_ws()
+
+    worksheet.update([df.columns.values.tolist()] + df.values.tolist(), range_name='C1:D10')
+
+    return worksheet
+
+
 def color_overdue_deadline(df: DataFrame, sheet: Worksheet) -> Worksheet:
     '''Окрашивает ячейки с просроченным дедлайном.'''
     sheet.format('H2:H200', {

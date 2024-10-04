@@ -14,6 +14,7 @@ from pytz import timezone
 from complexity import set_project_complexity
 from counting_points import count_adjusting_points, count_points
 from exceptions import TooManyRequestsApiError
+from results import do_results
 from quaterly_points import calculate_quarter
 from utils import TELEGRAM_TOKEN, get_list_of_engineers, is_point, send_message
 from worksheets import (connect_to_project_archive,
@@ -42,7 +43,8 @@ def process_adjusting_data(df: DataFrame) -> Worksheet:
 
 def correct_complexity(engineer: str, engineer_projects: DataFrame) -> DataFrame:
     '''
-    Берёт данные о корректировке сложности из таблицы проектировщика.
+    Берёт данные о корректировке сложности из таблицы проектировщика
+    и заменяет неверные данные.
     '''
     worksheet = connect_to_engineer_ws(engineer)
 
@@ -63,6 +65,8 @@ def process_data(engineers: list[str], df: DataFrame) -> None:
     Собирает данные из архива проектов, производит расчет баллов
     и отправляет полученные данные в таблицу "Премирование".
     '''
+    results = {}
+
     for engineer in engineers:
         blocks = []
         print(engineer)
@@ -87,9 +91,12 @@ def process_data(engineers: list[str], df: DataFrame) -> None:
         if not engineer_projects_filtered.empty:
             quarters = calculate_quarter(engineer_projects_filtered)
             send_quarter_data_to_spreadsheet(quarters, engineer)
-        time.sleep(20)
+            results[engineer] = quarters
+        time.sleep(10)
     
-    process_adjusting_data(df)
+    do_results(results)
+    
+    # process_adjusting_data(df)
     
 
 async def main():
