@@ -7,7 +7,6 @@ import holidays
 import pandas as pd
 from aiogram.exceptions import TelegramAPIError
 from dotenv import load_dotenv
-from gspread_formatting import *
 from pandas.core.frame import DataFrame
 from pandas.core.series import Series
 
@@ -37,13 +36,14 @@ async def send_message(bot: aiogram.Bot, message: str):
 
 def non_count_engineers() -> list[str]:
     '''
-    Получает список проектировщиков, для которых не надо делать премиальный расчет.
+    Возвращает список проектировщиков, для которых не надо делать премиальный расчет.
     '''
     sheet = connect_to_settings_ws()
     
-    df = pd.DataFrame(sheet.get_all_records())
-    if not df.empty:
-        engineers = df['Не учитывать'].iloc[0].split(', ')                                #TODO избавиться от ', '
+    df = sheet.get('A1:A20')
+    non_count_eng = pd.DataFrame(df[1:], columns=df[0])
+    if not non_count_eng.empty:
+        engineers = non_count_eng['Не учитывать'].tolist()
         return engineers
     else:
         return None
