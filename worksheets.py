@@ -142,6 +142,16 @@ def send_results_data_ws(df: DataFrame) -> Worksheet:
     return worksheet
 
 
+def send_bonus_data_ws(engineer: str, df: DataFrame) -> Worksheet:
+    '''Отправляет данные о выполнении плана на лист проектировщика.'''
+    worksheet = connect_to_engineer_ws(engineer)
+
+    worksheet.update([df.columns.values.tolist()] + df.values.tolist(), range_name='N1:O10')
+
+    return worksheet
+
+
+
 def color_overdue_deadline(df: DataFrame, sheet: Worksheet) -> Worksheet:
     '''Окрашивает ячейки с просроченным дедлайном.'''
     sheet.format('H2:H200', {
@@ -215,7 +225,7 @@ def create_engineer_ws(spreadsheet: Spreadsheet, engineer: str) -> Worksheet:
         'horizontalAlignment': 'CENTER',
         'verticalAlignment': 'MIDDLE',
     })
-    sheet.format('L1:N1', {
+    sheet.format('L1:O1', {
         'backgroundColor': {
             'red': 0.8,
             'green': 0.9,

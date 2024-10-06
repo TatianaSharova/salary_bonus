@@ -3,8 +3,6 @@ from pandas.core.frame import DataFrame
 from pandas.core.indexes.period import PeriodIndex
 from datetime import datetime as dt
 
-TARGET = 12
-
 pd.options.mode.chained_assignment = None
 
 
@@ -68,15 +66,6 @@ def calculate_quarter_points(row: DataFrame) -> list[dict]:
     return quarter_points
 
 
-def bonus_points(row: DataFrame) -> int:
-    '''Считает премиальные баллы.'''
-    if row['Баллы'] > TARGET:
-        return row['Баллы'] - TARGET
-    else:
-        return 0
-
-
-
 def calculate_quarter(df: DataFrame) -> DataFrame:
     '''
     Создает таблицу с кварталами и заработанными баллами в каждом квартале.
@@ -92,7 +81,5 @@ def calculate_quarter(df: DataFrame) -> DataFrame:
         lambda x: f"{x.quarter}-{x.year}"
         )
     result = result[result['Квартал'].str.contains(f'{dt.now().year}')]
-    result['Премиальные баллы'] = result.apply(bonus_points, axis=1)
-    
 
     return result
