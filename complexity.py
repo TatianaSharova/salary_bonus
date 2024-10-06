@@ -88,9 +88,9 @@ def set_project_complexity(row: Series) -> int:
 
     for type in first_type:
         if type in row['Тип объекта'].strip().lower():
-            if (amount_sections > 0 
+            if (amount_sections > 0
                 or has_imperator == True
-                or amount_dirs >= 20
+                or amount_dirs >= 10
             ):
                 return 2
             return 1
@@ -121,11 +121,11 @@ def set_project_complexity(row: Series) -> int:
     
     if amount_dirs <= 4:
         return 2
-    if amount_dirs < 12:
+    if amount_dirs < 15:
         return 3
     if amount_dirs >=20:
         return 5
-    if (amount_dirs >= 12
+    if (amount_dirs >= 15
     or amount_sections > 0 or has_imperator == True):
         return 4
     else:
