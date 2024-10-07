@@ -229,6 +229,8 @@ def count_points(row: Series, df: DataFrame, blocks: list) -> int:
     filled_project = check_filled_projects(row)
     if not filled_project:
         return 'Необходимо заполнить данные для расчёта'
+    if 'да' in row['Является корректировкой'].strip().lower():
+        return count_adjusting_points(row, blocks)
     if 'блок-контейнер' in row['Тип объекта'].strip().lower():
         return count_block(row, blocks)
 
@@ -246,32 +248,23 @@ def count_points(row: Series, df: DataFrame, blocks: list) -> int:
     return points
 
 
-def count_adjusting_points(row: Series, engineer: str):
+def count_adjusting_points(row: Series, blocks: list):
     '''
     Расчитывает баллы за корректировки: 30 процентов от баллов за готовый проект.
     Дедлайн для корректировок не считается.
     '''
     points = 0
-    filled_project = check_filled_projects(row)
 
-    if engineer in row['Разработал']:
-        return 'Баллы за корректировки своих проектов не расчитываются'
-
-    if not filled_project:
-        return 'Необходимо заполнить данные для расчёта'
     if 'блок-контейнер' in row['Тип объекта'].strip().lower():
         return 0.3
     
-    try:
-        complexity = int(row['Сложность'])
-    except ValueError:
-        return 'Сложность объекта заполнена некорректно'
+    complexity = int(row['Сложность для расчета'])
 
     points += check_amount_directions(complexity, row['Количество направлений'])
     points += check_square(complexity, row)
     points += check_sot_skud(row)
     points += check_cultural_heritage(row)
     points += check_net(row)
-    points = round(points/check_authors(row['Корректировки']),1)
+    points = round(points/check_authors(row['Разработал']),1)
 
     return points*0.3

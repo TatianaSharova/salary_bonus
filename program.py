@@ -12,33 +12,17 @@ from pandas.core.frame import DataFrame
 from pytz import timezone
 
 from complexity import set_project_complexity
-from counting_points import count_adjusting_points, count_points
+from counting_points import count_points
 from exceptions import TooManyRequestsApiError
 from results import do_results
 from quaterly_points import calculate_quarter
 from utils import TELEGRAM_TOKEN, get_list_of_engineers, is_point, send_message
 from worksheets import (connect_to_project_archive,
                         connect_to_engineer_ws,
-                        send_adj_data_to_spreadsheet,
                         send_project_data_to_spreadsheet,
                         send_quarter_data_to_spreadsheet)
 
 pd.options.mode.chained_assignment = None
-
-
-def process_adjusting_data(df: DataFrame) -> Worksheet:
-    '''
-    Расчитывает баллы за корректировки и отсылает данные в таблицу "Премирование".
-    '''
-    eng_for_adj = get_list_of_engineers(df, colomn='Корректировки')
-    
-    if eng_for_adj != []:
-        for engineer in eng_for_adj:
-            adjusting_projects = df.loc[df['Корректировки'].str.contains(f'{engineer}')].reset_index(drop=True)
-            adjusting_projects["Баллы"] = adjusting_projects.apply(count_adjusting_points, axis=1, args=(adjusting_projects, engineer))
-            adjusting_projects_small = adjusting_projects[['Наименование объекта', 'Шифр (ИСП)', 'Разработал', 'Баллы',
-                    'Корректировки']]
-            send_adj_data_to_spreadsheet(adjusting_projects_small, engineer)
 
 
 def correct_complexity(engineer: str, engineer_projects: DataFrame) -> DataFrame:
@@ -96,10 +80,8 @@ def process_data(engineers: list[str], df: DataFrame) -> None:
     
     do_results(results)
     
-    # process_adjusting_data(df)
-    
 
-async def main():
+async def main() -> None:
     '''
     Запускает и завершает работу программы.
     '''
