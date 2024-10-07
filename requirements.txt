@@ -1,6 +1,6 @@
 gspread==6.1.2
 pandas==2.2.2
-holidays==0.54
+holidays
 gspread_formatting==1.2.0
 python-dotenv==1.0.1
 aiogram==3.12.0
