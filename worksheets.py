@@ -3,12 +3,11 @@ import time
 from datetime import datetime as dt
 
 import gspread
+from dotenv import load_dotenv
 from gspread.spreadsheet import Spreadsheet
 from gspread.worksheet import Worksheet
 from gspread_formatting import *
 from pandas.core.frame import DataFrame
-from dotenv import load_dotenv
-
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 creds_path = os.path.join(BASE_DIR, 'creds.json')
@@ -16,6 +15,9 @@ env_path = os.path.join(BASE_DIR, '.env')
 load_dotenv(dotenv_path=env_path)
 
 EMAIL = os.getenv('EMAIL')
+EMAIL2 = os.getenv('EMAIL2')
+EMAIL3 = os.getenv('EMAIL3')
+EMAIL4 = os.getenv('EMAIL4')
 
 gc = gspread.service_account(filename=creds_path)
 
@@ -103,7 +105,10 @@ def connect_to_bonus_ws() -> Spreadsheet:
         spreadsheet = gc.open(f'Премирование{dt.now().year}')
     except gspread.exceptions.SpreadsheetNotFound:
         spreadsheet = gc.create(f'Премирование{dt.now().year}')
-        spreadsheet.share(EMAIL, perm_type='user', role='writer', notify=True)        #TODO с кем шерить доступ
+        spreadsheet.share(EMAIL, perm_type='user', role='writer', notify=True)
+        spreadsheet.share(EMAIL2, perm_type='user', role='writer', notify=True)
+        spreadsheet.share(EMAIL3, perm_type='user', role='writer', notify=True)
+        spreadsheet.share(EMAIL4, perm_type='user', role='writer', notify=True)
         worksheet = add_settings_ws(spreadsheet)
         sheet1 = spreadsheet.worksheet('Sheet1')
         spreadsheet.del_worksheet(sheet1)
@@ -280,23 +285,3 @@ def send_bonus_data_ws(engineer: str, df: DataFrame) -> Worksheet:
     worksheet.update([df.columns.values.tolist()] + df.values.tolist(), range_name='N1:P10')
 
     return worksheet
-
-
-# def send_adj_data_to_spreadsheet(df: DataFrame,
-#                                  engineer: str) -> Worksheet:
-#     '''
-#     Отсылает данные о сделанных корректировках.
-#     '''
-#     spreadsheet = connect_to_bonus_ws()
-
-#     try:
-#         sheet = spreadsheet.worksheet(f'{engineer}')
-#     except gspread.exceptions.WorksheetNotFound:
-#         sheet = create_engineer_ws(spreadsheet, engineer)
-
-
-    
-    # sheet.merge_cells('P1:T1')
-    # sheet.update([['Корректировки']], 'P1')
-
-    # sheet.update([df.columns.values.tolist()] + df.values.tolist(), range_name='M2:Q200')
