@@ -6,8 +6,6 @@ import pandas as pd
 from pandas.core.frame import DataFrame
 from pandas.core.series import Series
 
-from utils import count_block
-
 pd.options.mode.chained_assignment = None
 
 
@@ -185,7 +183,7 @@ def calculate_deadline(start_date: dt.date, work_days: int, row: Series) -> dt.d
     return current_date - timedelta(days=1)
 
 
-def check_spend_time(row: Series, points: int, df: DataFrame) -> int:
+def check_spend_time(row: Series, points: int, df: DataFrame, amount: int) -> int:
     '''
     Проверка на соблюдение дэдлайнов проекта.
     Если проект выполнен в срок из расчета 1 балл = 5 рабочим дням,
@@ -193,10 +191,13 @@ def check_spend_time(row: Series, points: int, df: DataFrame) -> int:
     баллы умножаются на понижающий коэффициент.
     '''
     coefficient = 0.9
-    days_deadline = points*5
+    if 'блок-контейнер' in row['Тип объекта'].strip().lower():
+        days_deadline = amount + 4
+    else:
+        days_deadline = points*5
 
     try:
-        start_date = dt.strptime(row['Дата начала проекта'], "%d.%m.%Y").date()         #TODO обновление пакета holidays на сервере
+        start_date = dt.strptime(row['Дата начала проекта'], "%d.%m.%Y").date()
     except ValueError:
         return 'Некорректно введены даты.'
     
@@ -218,6 +219,46 @@ def check_spend_time(row: Series, points: int, df: DataFrame) -> int:
             points = points*coefficient
 
     return points
+  
+
+def count_deadline_for_blocks(row: Series, df: DataFrame, points):
+    '''Отсортировывает блок-контейнеры по группам, чтобы посчитать для них общий дедлайн.
+    Для одиночных контейнеров дедлайн считается, как для обычных проектов.'''
+    name = row['Наименование объекта']
+    start = row['Дата начала проекта']
+    end = row['Дата окончания проекта']
+
+    filtered_df = df[
+        (df['Наименование объекта'] == name) & 
+        (df['Дата начала проекта'] == start) & 
+        (df['Дата окончания проекта'] == end)
+    ]
+    num_rows = filtered_df.shape[0]
+
+    if num_rows == 1:
+        row['Тип объекта'] = 'единственный контейн-р'
+        return check_spend_time(row, points, df, amount=num_rows)
+    if num_rows > 1:
+        return check_spend_time(row, points, df, amount=num_rows)
+
+
+
+def count_block(row: Series, blocks: list, points: int, df: DataFrame) -> float:
+    '''
+    Расчитывает баллы для блок-контейнеров.
+    За первый разработанный объект - 1 балл,
+    за остальные - 0.5 балла.
+    '''
+    name = row['Наименование объекта']
+
+    points = count_deadline_for_blocks(row, df, points)
+
+    if name in blocks:
+        return 0.5*points
+    else:
+        blocks.append(name)
+        return points
+
 
 def count_points(row: Series, df: DataFrame, blocks: list) -> int:
     '''
@@ -231,9 +272,6 @@ def count_points(row: Series, df: DataFrame, blocks: list) -> int:
         return 'Необходимо заполнить данные для расчёта'
     if 'да' in row['Является корректировкой'].strip().lower():
         return count_adjusting_points(row, blocks)
-    if 'блок-контейнер' in row['Тип объекта'].strip().lower():
-        return count_block(row, blocks)
-
 
     complexity = int(row['Сложность для расчета'])
 
@@ -243,7 +281,11 @@ def count_points(row: Series, df: DataFrame, blocks: list) -> int:
     points += check_cultural_heritage(row)
     points += check_net(row)
     points = round(points/check_authors(row['Разработал']),1)
-    points = check_spend_time(row, points, df)
+
+    if 'блок-контейнер' in row['Тип объекта'].strip().lower():
+        return count_block(row, blocks, points, df)
+    
+    points = check_spend_time(row, points, df, amount=0)
 
     return points
 
@@ -254,9 +296,6 @@ def count_adjusting_points(row: Series, blocks: list):
     Дедлайн для корректировок не считается.
     '''
     points = 0
-
-    if 'блок-контейнер' in row['Тип объекта'].strip().lower():
-        return 0.3
     
     complexity = int(row['Сложность для расчета'])
 

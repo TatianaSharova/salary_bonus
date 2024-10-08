@@ -26,7 +26,7 @@ def make_results(res: dict) -> DataFrame:
     return average_df
 
 
-def calculate_bonus(row):
+def calculate_bonus(row: Series) -> int:
     '''Расчитывает премиальные баллы.'''
     if pd.notna(row['Баллы']) and pd.notna(row['План']) and (
         row['Баллы'] >= row['План']):
@@ -38,10 +38,12 @@ def calculate_bonus(row):
         return None
 
 
-def count_percent(row):
+def count_percent(row: Series) -> str:
     '''Расчитывает процент от плана.'''
     if pd.notna(row['Баллы']) and pd.notna(row['План']) and(
-    row['Средние баллы/План'] != 0):
+        row['Средние баллы/План'] != 0
+        and row['План'] != 0
+    ):
         percent = int((row['Баллы']/row['План'])*100)
         return f'{percent} %'
     else:
@@ -108,8 +110,17 @@ def count_target(engineer: str, average_df: DataFrame) -> DataFrame:
         average_df['План'] = average_df['План'].replace({pd.NA: None, float('nan'): None})
         return average_df
 
+def check_none(row: Series) -> None:
+    '''Проверяет, являются ли столбцы 'Премиальные баллы' и 'Процент от плана'
+    пустыми. Если они пустые, то столбец 'План' тоже становится пустым(None).
+    '''
+    if row['Премиальные баллы'] is None and row['Процент от плана'] is None:
+        return None
+    else:
+        return row['План']
 
-def do_results(results: dict):
+
+def do_results(results: dict) -> None:
     '''
     Отправляет данные о плане и премиальных баллах в таблицу.
     '''
@@ -128,6 +139,7 @@ def do_results(results: dict):
         result_df['Процент от плана'] = result_df.apply(count_percent, axis=1)
         result_df['Процент от плана'] = result_df['Процент от плана'].replace({pd.NA: None, float('nan'): None})
         result_df = result_df[['План', 'Премиальные баллы', 'Процент от плана']]
-        print(result_df)
+        result_df['План'] = result_df.apply(check_none, axis=1)
+        result_df['План'] = result_df['План'].replace({pd.NA: None, float('nan'): None})
 
         send_bonus_data_ws(key, result_df)

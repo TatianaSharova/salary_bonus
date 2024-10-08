@@ -80,21 +80,6 @@ def get_list_of_engineers(df: DataFrame, colomn: str) -> list:
         return list(unique_eng)
 
 
-def count_block(row: Series, blocks: list) -> float:
-    '''
-    Расчитывает баллы для блок-контейнеров.
-    За первый разработанный объект - 1 балл,
-    за остальные - 0.5 балла.
-    '''
-    name = row['Наименование объекта']
-
-    if name in blocks:
-        return 0.5
-    else:
-        blocks.append(name)
-        return 1.0
-
-
 def is_point(s: str) -> bool:
     '''
     Проверка столбца "Баллы".
