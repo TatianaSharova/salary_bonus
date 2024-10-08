@@ -1,4 +1,5 @@
 import asyncio
+import subprocess
 import time
 from datetime import datetime, timedelta
 
@@ -6,7 +7,6 @@ import aiogram
 import gspread
 import pandas as pd
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
-from gspread.worksheet import Worksheet
 from gspread_formatting import *
 from pandas.core.frame import DataFrame
 from pytz import timezone
@@ -14,11 +14,10 @@ from pytz import timezone
 from complexity import set_project_complexity
 from counting_points import count_points
 from exceptions import TooManyRequestsApiError
-from results import do_results
 from quaterly_points import calculate_quarter
+from results import do_results
 from utils import TELEGRAM_TOKEN, get_list_of_engineers, is_point, send_message
-from worksheets import (connect_to_project_archive,
-                        connect_to_engineer_ws,
+from worksheets import (connect_to_engineer_ws, connect_to_project_archive,
                         send_project_data_to_spreadsheet,
                         send_quarter_data_to_spreadsheet)
 
@@ -111,6 +110,15 @@ async def main() -> None:
     await bot.session.close()
 
 
+async def update_holidays_package():
+    '''Обновляет пакет holidays для подгрузки данных о выходных в новых годах.'''
+    try:
+        subprocess.run(["pip", "install", "--upgrade", "holidays"], check=True)
+    except subprocess.CalledProcessError as error:
+        await send_message(aiogram.Bot(token=TELEGRAM_TOKEN), f'Ошибка: {error}')
+
+
+
 def setup_scheduler():
     '''
     Запускает планировщик. Задача выполнится сразу после запуска,
@@ -124,7 +132,12 @@ def setup_scheduler():
                       next_run_time=datetime.now(samara_tz)+timedelta(seconds=5),
                       misfire_grace_time=120)
 
-    scheduler.add_job(main, trigger='cron', hour=10, minute=10,
+    scheduler.add_job(main, trigger='cron', hour=10, minute=0,
+                      misfire_grace_time=60)
+    
+    # scheduler.add_job(update_holidays_package, 'cron', month=12, day=1, hour=9, minute=0)
+
+    scheduler.add_job(update_holidays_package, 'cron', month=10, day=8, hour=23, minute=0,
                       misfire_grace_time=60)
 
     scheduler.start()
