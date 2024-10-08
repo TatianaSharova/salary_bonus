@@ -30,6 +30,7 @@ def count_types(row: Series) -> int:
 
 
 def count_modules(row: Series) -> int:
+    '''Считает количество модулей.'''
     modules = row['Количество модулей'].strip()
     try:
         count = int(modules)
@@ -51,6 +52,7 @@ def count_modules(row: Series) -> int:
     return count
 
 def count_amount_directions_modules(row: Series) ->int:
+    '''Считает количество направлений с учетом, что каждый 20 модулей = 1 направлению.'''
     amount_dirs = row['Количество направлений'].strip()
     try:
         amount_dirs = int(amount_dirs)
@@ -78,14 +80,19 @@ def set_project_complexity(row: Series) -> int:
 
     amount_dirs = count_amount_directions_modules(row)
 
-
-    first_type = ['блок-контейнер', 'контейнер', 'школа', 'больница', 'поликлин', 'медицинские учреждения',
+    container_type = ['блок-контейнер', 'контейнер']
+    first_type = ['школа', 'больница', 'поликлин', 'медицинские учреждения',
                   'мед. учрежд', 'цгс', 'отделение', 'комиссариат', 'гараж']
     second_type = ['адм. здание', 'административное здание', 'жк', 'суд', 'универ']
     third_type = ['производственное здание', 'пром. предприятие', 'выставка', 'музей', 'нии', 'завод',
                   'модульная станция', 'станция', 'фок']
     fourth_type = ['цод','производственное здание', 'пром. предприятие']
 
+    for type in container_type:
+        if type in row['Тип объекта'].strip().lower():
+            if has_imperator == True:
+                return 2
+            return 1
     for type in first_type:
         if type in row['Тип объекта'].strip().lower():
             if (amount_sections > 0
