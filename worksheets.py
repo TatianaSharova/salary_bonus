@@ -18,6 +18,7 @@ EMAIL = os.getenv('EMAIL')
 EMAIL2 = os.getenv('EMAIL2')
 EMAIL3 = os.getenv('EMAIL3')
 EMAIL4 = os.getenv('EMAIL4')
+ENDPOINT = os.getenv('ENDPOINT')
 
 gc = gspread.service_account(filename=creds_path)
 
@@ -81,7 +82,7 @@ def add_settings_ws(spreadsheet: Spreadsheet) -> Worksheet:
         'horizontalAlignment': 'CENTER',
         'verticalAlignment': 'MIDDLE'
     })
-    sheet.format(['A1', 'C1:D1'], {
+    sheet.format(['A1', 'C1:D1', 'F1:R1'], {
         'backgroundColor': {
             'red': 1,
             'green': 0.8,
@@ -185,7 +186,7 @@ def create_engineer_ws(spreadsheet: Spreadsheet, engineer: str) -> Worksheet:
     set_column_widths(sheet, [('A', 100), ('B', 400), ('C', 200), ('D:G', 150),
                               ('I:J', 150)])
     sheet.update([['Корректировка сложности']], 'J1')
-    sheet.update([['Отпуск/отгул (в часах)']], 'Q1')
+    sheet.update([['Отпуск/отгул/не работал(а) (в часах)']], 'Q1')
     sheet.format('A1:J1', {
         'backgroundColor': {
         'red': 0.7,
@@ -285,3 +286,45 @@ def send_bonus_data_ws(engineer: str, df: DataFrame) -> Worksheet:
     worksheet.update([df.columns.values.tolist()] + df.values.tolist(), range_name='N1:P10')
 
     return worksheet
+
+
+def connect_to_attendance_sheet(month: str) -> Worksheet:
+    '''Подключается к табелю посещаемости офиса.'''
+    try:
+        spreadsheet = gc.open_by_url(ENDPOINT)
+    except gspread.exceptions.SpreadsheetNotFound:
+        return None
+    
+    try:
+        worksheet = spreadsheet.worksheet(month)
+    except gspread.exceptions.WorksheetNotFound:
+        try:
+            month = month + ' '
+            worksheet = spreadsheet.worksheet(month)
+        except gspread.exceptions.WorksheetNotFound:
+            return None
+    
+    return worksheet
+
+
+def send_non_working_hours_ws(engineer: str, df: DataFrame) -> Worksheet:
+    '''Отправляет данные о нерабочих часах на лист проектировщика.'''
+    worksheet = connect_to_engineer_ws(engineer)
+
+    non_working_hours = df['Нерабочие часы'].values.tolist()
+
+    non_working_hours = [None if x == 0 else x for x in non_working_hours]
+
+    worksheet.update([[cell] for cell in non_working_hours],  range_name='Q2:Q5')
+
+    return worksheet
+
+
+def send_hours_data_ws(df: DataFrame) -> Worksheet:
+    '''Отправляет данные о рабочих часах на лист настроек.'''
+    worksheet = connect_to_settings_ws()
+
+    worksheet.update([df.columns.values.tolist()] + df.values.tolist(), range_name='F1:R30')
+
+    return worksheet
+

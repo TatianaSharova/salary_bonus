@@ -99,7 +99,6 @@ async def main() -> None:
         if list_of_engineers != []:
             try:
                 salary_bonus = process_data(list_of_engineers, df)
-
                 await send_message(bot, 'Расчет баллов успешно выполнен.')
             except gspread.exceptions.APIError as error:
                 await send_message(bot, f'{error}')

@@ -1,14 +1,17 @@
+import time
 from datetime import datetime as dt
 
 import pandas as pd
-import holidays
 from pandas.core.frame import DataFrame
-from worksheets import send_results_data_ws, send_bonus_data_ws, connect_to_engineer_ws
 from pandas.core.series import Series
 
+from utils import MONTHS
+from worksheets import (connect_to_attendance_sheet, connect_to_engineer_ws,
+                        send_bonus_data_ws, send_hours_data_ws,
+                        send_non_working_hours_ws, send_results_data_ws)
 
 
-def make_results(res: dict) -> DataFrame:
+def count_average_points(res: dict) -> DataFrame:
     '''
     Считает среднее арифметическое количество набранных баллов в кварталах.
     '''
@@ -50,50 +53,88 @@ def count_percent(row: Series) -> str:
         return None
 
 
-def count_working_hours_per_quarter(year: int) -> DataFrame:
-    '''
-    Считает количество рабочих часов в каждом квартале в заданном году с учетом праздников и выходных.
-    '''
-    ru_holidays = holidays.RU(years=year)
-    
-    date_range = pd.date_range(start=f'{year}-01-01', end=f'{year}-12-31', freq='D')
-
-    dates = pd.Series(date_range.date)
-
-    working_days = date_range[(date_range.weekday < 5) & (~dates.isin(ru_holidays))]
-
+def count_quaterly_hours(df: DataFrame):
+    '''Суммирует часы по кварталам.'''
     quarters = {
-        f'1-{year}': working_days[working_days.quarter == 1],
-        f'2-{year}': working_days[working_days.quarter == 2],
-        f'3-{year}': working_days[working_days.quarter == 3],
-        f'4-{year}': working_days[working_days.quarter == 4]
-    }
+    f'1-{dt.now().year}': [MONTHS['1'], MONTHS['2'], MONTHS['3']],
+    f'2-{dt.now().year}': [MONTHS['4'], MONTHS['5'], MONTHS['6']],
+    f'3-{dt.now().year}': [MONTHS['7'], MONTHS['8'], MONTHS['9']],
+    f'4-{dt.now().year}': [MONTHS['10'], MONTHS['11'], MONTHS['12']]
+}
 
-    working_hours_per_quarter = {q: len(days) * 8 for q, days in quarters.items()}
+    quarterly_hours = pd.DataFrame()
 
-    df_working_hours_per_quarter = pd.DataFrame(
-        working_hours_per_quarter.items(),
-        columns=['Квартал', 'Рабочие часы']
-    )
+    for quarter, months in quarters.items():
+        quarterly_hours[quarter] = df[months].sum(axis=1, skipna=True)
 
-    return df_working_hours_per_quarter
+    quarterly_hours['Имя'] = df['Имя']
+
+    quarterly_hours = quarterly_hours[['Имя', f'1-{dt.now().year}', f'2-{dt.now().year}',
+                                       f'3-{dt.now().year}', f'4-{dt.now().year}']]
+
+    return quarterly_hours
+
+
+def get_working_hours_data(engineers: list[str]) -> DataFrame:
+    '''Собирает данные о рабочих часах проектировщиков.'''
+    current_month = dt.now().month
+
+    months_list = list(MONTHS.values())
+    columns = ['Имя'] + months_list
+    df = pd.DataFrame(columns=columns)
+
+    for engineer in engineers:
+        num = 1
+        engineer_work = {'Имя': f'{engineer}'}
+        while num <= current_month:
+            worksheet = connect_to_attendance_sheet(MONTHS[f'{num}'])
+            if worksheet:
+                raw_data = worksheet.get('A1:T136')
+                data = pd.DataFrame(raw_data[1:], columns=raw_data[0])
+                filtered_df = data[data['Фамилия Имя Отчество '].str.contains(f'{engineer}', na=False)]
+                if not filtered_df.empty:
+                    hours = filtered_df['Часы'].values[0]
+                    engineer_work[f'{MONTHS[str(num)]}'] = hours
+            num +=1
+        df = pd.concat([df, pd.DataFrame([engineer_work])], ignore_index=True)
+        time.sleep(5)
+
+
+    df.iloc[:, 1:] = df.iloc[:, 1:].apply(pd.to_numeric, errors='coerce')
+
+    max_values = df.iloc[:, 1:].max(skipna=True)
+    row_with_plan = pd.DataFrame([['Рабочий план'] + max_values.tolist()], columns=df.columns)
+    df_work = pd.concat([df, row_with_plan], ignore_index=True)
+
+    df_work_without_nan = df_work.fillna(0)
+
+    send_hours_data_ws(df_work_without_nan)
+
+    quarterly_hours = count_quaterly_hours(df_work)
+
+    return quarterly_hours
 
 
 def get_target(row: Series):
-    '''Считает рабочий план, исходя от рабочего времени.'''
-    if pd.notna(row['Средние баллы/План']) and row['Нерабочие часы'] is not None:
+    '''Считает рабочий план в процентном соотношении от рабочего времени.'''
+    if (pd.notna(row['Средние баллы/План'])
+        and pd.notna(row['Нерабочие часы'])
+        and row['Рабочие часы'] != 0):
         part_from_work_hrs = (int(row['Рабочие часы']) - int(row['Нерабочие часы']))/int(row['Рабочие часы'])
         target = part_from_work_hrs*int(row['Средние баллы/План'])
         return int(target)
     if pd.notna(row['Средние баллы/План']) and row['Нерабочие часы'] is None:
         return int(row['Средние баллы/План'])
+    if row['Средние баллы/План'] == 0:
+        return 0
     else:
         return None
 
 
-def count_target(engineer: str, average_df: DataFrame) -> DataFrame:
+def search_for_hours(engineer: str, average_df: DataFrame) -> DataFrame:
     '''
-    Берет информацию о нерабочем времени проектировщика из его листа и корректирует рабочий план.
+    Берет информацию о нерабочем времени проектировщика из его листа и корректирует рабочий план
+    в том случае, если информации о проектировщике нет в табеле посещаемости офиса.
     '''
     worksheet = connect_to_engineer_ws(engineer)
 
@@ -101,7 +142,7 @@ def count_target(engineer: str, average_df: DataFrame) -> DataFrame:
         raw_data = worksheet.get('Q1:Q5')
         non_working_hours_per_quarter = pd.DataFrame(raw_data[1:], columns=raw_data[0])
         if not non_working_hours_per_quarter.empty:
-            average_df['Нерабочие часы'] = non_working_hours_per_quarter['Отпуск/отгул (в часах)']
+            average_df['Нерабочие часы'] = non_working_hours_per_quarter['Отпуск/отгул/не работал(а) (в часах)']
             average_df['Нерабочие часы'] = average_df['Нерабочие часы'].replace({pd.NA: None, float('nan'): None})
             average_df['План'] = average_df.apply(get_target, axis=1)
             average_df['План'] = average_df['План'].replace({pd.NA: None, float('nan'): None})
@@ -109,6 +150,27 @@ def count_target(engineer: str, average_df: DataFrame) -> DataFrame:
         average_df['План'] = average_df['Средние баллы/План']
         average_df['План'] = average_df['План'].replace({pd.NA: None, float('nan'): None})
         return average_df
+
+
+def count_target(engineer: str, average_df: DataFrame, df_hours: DataFrame) -> DataFrame:
+    '''Рассчитывает рабочий план в зависимости от рабочих часов.'''
+    filtered_df = df_hours[df_hours['Имя'] == engineer]
+
+    if (filtered_df.iloc[0, 1:] == 0).all():
+        return search_for_hours(engineer, average_df)
+    
+    transposed_df = filtered_df.melt(id_vars=['Имя'], var_name='Квартал', value_name='Часы')
+    transposed_df = transposed_df[['Квартал', 'Часы']]
+    new_df = transposed_df.rename(columns={'Часы': f'{engineer}'})
+    
+    average_df['Нерабочие часы'] = average_df['Рабочие часы'] - new_df[f'{engineer}']
+
+    average_df['План'] = average_df.apply(get_target, axis=1)
+
+    send_non_working_hours_ws(engineer, average_df)
+
+    return average_df
+
 
 def check_none(row: Series) -> None:
     '''Проверяет, являются ли столбцы 'Премиальные баллы' и 'Процент от плана'
@@ -124,22 +186,39 @@ def do_results(results: dict) -> None:
     '''
     Отправляет данные о плане и премиальных баллах в таблицу.
     '''
-    average_df = make_results(results)
+    average_df = count_average_points(results)
     send_results_data_ws(average_df)
 
-    working_hours_per_quarter = count_working_hours_per_quarter(int(f'{dt.now().year}'))
+    engineers = list(results.keys())
+    working_hours_per_quarter = get_working_hours_data(engineers)
 
-    target_with_hours_df = pd.merge(average_df, working_hours_per_quarter, on='Квартал', how='outer')
+    full_time_work_hours = pd.DataFrame({'Квартал': [f'1-{dt.now().year}', f'2-{dt.now().year}',
+                                                     f'3-{dt.now().year}', f'4-{dt.now().year}'],
+                                         'Рабочие часы': working_hours_per_quarter.iloc[-1, 1:].tolist()})
+    target_with_hours_df = pd.merge(average_df, full_time_work_hours, on='Квартал', how='outer')
+
 
     for key, value in results.items():
-        target_df = count_target(key, target_with_hours_df)
+        target_df = count_target(key, target_with_hours_df, working_hours_per_quarter)
+        if key == 'Трифонова' or key == 'Фокина':
+            print(key)
+            print(target_df)
         result_df = pd.merge(target_df, value, on='Квартал', how='outer')
+        if key == 'Трифонова' or key == 'Фокина':
+            print(key)
+            print(result_df)
         result_df['Премиальные баллы'] = result_df.apply(calculate_bonus, axis=1)
         result_df['Премиальные баллы'] = result_df['Премиальные баллы'].replace({pd.NA: None, float('nan'): None})
         result_df['Процент от плана'] = result_df.apply(count_percent, axis=1)
         result_df['Процент от плана'] = result_df['Процент от плана'].replace({pd.NA: None, float('nan'): None})
         result_df = result_df[['План', 'Премиальные баллы', 'Процент от плана']]
+        if key == 'Трифонова' or key == 'Фокина':
+            print(key)
+            print(result_df)
         result_df['План'] = result_df.apply(check_none, axis=1)
+        if key == 'Трифонова' or key == 'Фокина':
+            print(key)
+            print(result_df)
         result_df['План'] = result_df['План'].replace({pd.NA: None, float('nan'): None})
 
         send_bonus_data_ws(key, result_df)

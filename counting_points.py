@@ -271,7 +271,7 @@ def count_points(row: Series, df: DataFrame, blocks: list) -> int:
     if not filled_project:
         return 'Необходимо заполнить данные для расчёта'
     if 'да' in row['Является корректировкой'].strip().lower():
-        return count_adjusting_points(row, blocks)
+        return count_adjusting_points(row, df, blocks)
 
     complexity = int(row['Сложность для расчета'])
 
@@ -290,10 +290,9 @@ def count_points(row: Series, df: DataFrame, blocks: list) -> int:
     return points
 
 
-def count_adjusting_points(row: Series, blocks: list):
+def count_adjusting_points(row: Series, df: DataFrame, blocks: list):
     '''
     Расчитывает баллы за корректировки: 30 процентов от баллов за готовый проект.
-    Дедлайн для корректировок не считается.
     '''
     points = 0
     
@@ -305,5 +304,7 @@ def count_adjusting_points(row: Series, blocks: list):
     points += check_cultural_heritage(row)
     points += check_net(row)
     points = round(points/check_authors(row['Разработал']),1)
+
+    points = check_spend_time(row, points, df, amount=0)
 
     return points*0.3
