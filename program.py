@@ -7,6 +7,7 @@ import aiogram
 import gspread
 import pandas as pd
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
+from apscheduler.triggers.cron import CronTrigger
 from gspread_formatting import *
 from pandas.core.frame import DataFrame
 from pytz import timezone
@@ -130,8 +131,8 @@ def setup_scheduler():
     scheduler.add_job(main, trigger='date',
                       next_run_time=datetime.now(samara_tz)+timedelta(seconds=5),
                       misfire_grace_time=120)
-
-    scheduler.add_job(main, trigger='cron', hour=10, minute=0,
+    
+    scheduler.add_job(main, CronTrigger(day_of_week='tue,fri', hour=10, minute=0),
                       misfire_grace_time=60)
     
     scheduler.add_job(update_holidays_package, 'cron', month=12, day=1, hour=9, minute=0,
