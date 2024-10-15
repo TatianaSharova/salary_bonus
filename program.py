@@ -1,4 +1,5 @@
 import asyncio
+import logging
 import subprocess
 import time
 from datetime import datetime, timedelta
@@ -23,6 +24,12 @@ from worksheets import (connect_to_engineer_ws, connect_to_project_archive,
                         send_quarter_data_to_spreadsheet)
 
 pd.options.mode.chained_assignment = None
+pd.set_option('future.no_silent_downcasting', True)
+
+logging.basicConfig(
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    level=logging.INFO
+)
 
 
 def correct_complexity(engineer: str, engineer_projects: DataFrame) -> DataFrame:
@@ -85,6 +92,7 @@ async def main() -> None:
     '''
     Запускает и завершает работу программы.
     '''
+    logging.info('Запущена основная задача.')
     bot = aiogram.Bot(token=TELEGRAM_TOKEN)
     
     try:
@@ -101,10 +109,13 @@ async def main() -> None:
             try:
                 salary_bonus = process_data(list_of_engineers, df)
                 await send_message(bot, 'Расчет баллов успешно выполнен.')
+                logging.info('Программа успешно выполнила работу.')
             except gspread.exceptions.APIError as error:
                 await send_message(bot, f'{error}')
+                logging.error(error)
                 raise TooManyRequestsApiError(error)
             except Exception as error:
+                logging.error(error)
                 await send_message(bot, f'Ошибка: {error}')
     
     await bot.session.close()
@@ -114,7 +125,9 @@ async def update_holidays_package():
     '''Обновляет пакет holidays для подгрузки данных о выходных в новых годах.'''
     try:
         subprocess.run(["pip", "install", "--upgrade", "holidays"], check=True)
+        logging.info('Библиотека holidays была обновлена.')
     except subprocess.CalledProcessError as error:
+        logging.warning('Библиотека holidays не обновлена.')
         await send_message(aiogram.Bot(token=TELEGRAM_TOKEN), f'Ошибка: {error}')
 
 
@@ -132,11 +145,11 @@ def setup_scheduler():
                       next_run_time=datetime.now(samara_tz)+timedelta(seconds=5),
                       misfire_grace_time=120)
     
-    scheduler.add_job(main, CronTrigger(day_of_week='tue,fri', hour=10, minute=0),
+    scheduler.add_job(main, CronTrigger(day_of_week='tue,fri', hour=10, minute=0, timezone=samara_tz),
                       misfire_grace_time=60)
     
     scheduler.add_job(update_holidays_package, 'cron', month=12, day=1, hour=9, minute=0,
-                      misfire_grace_time=60)
+                      misfire_grace_time=60, timezone=samara_tz)
 
     scheduler.start()
 

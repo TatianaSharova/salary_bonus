@@ -103,7 +103,7 @@ def get_working_hours_data(engineers: list[str]) -> DataFrame:
     df.iloc[:, 1:] = df.iloc[:, 1:].apply(pd.to_numeric, errors='coerce')
 
     max_values = df.iloc[:, 1:].max(skipna=True)
-    row_with_plan = pd.DataFrame([['Рабочий план'] + max_values.tolist()], columns=df.columns)
+    row_with_plan = pd.DataFrame([['Рабочий план (часы)'] + max_values.tolist()], columns=df.columns)
     df_work = pd.concat([df, row_with_plan], ignore_index=True)
 
     df_work_without_nan = df_work.fillna(0)
