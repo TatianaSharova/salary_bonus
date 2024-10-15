@@ -6,7 +6,7 @@ import gspread
 from dotenv import load_dotenv
 from gspread.spreadsheet import Spreadsheet
 from gspread.worksheet import Worksheet
-from gspread_formatting import *
+from gspread_formatting import set_column_width, set_column_widths, set_frozen
 from pandas.core.frame import DataFrame
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -49,7 +49,7 @@ def create_new_ws_project_archive(spreadsheet: Spreadsheet) -> Worksheet:
     new_sheet = spreadsheet.worksheet(f'{source_sheet_title} (копия)')
 
     new_sheet.update_title(f'{dt.now().year}')
-    
+
     total_rows = new_sheet.row_count
     total_cols = new_sheet.col_count
 
@@ -59,19 +59,19 @@ def create_new_ws_project_archive(spreadsheet: Spreadsheet) -> Worksheet:
     return new_sheet
 
 
-
 def connect_to_project_archive() -> Worksheet:
     '''
     Открывает лист с архивом проектов.
     При смене года создает новый лист.
     '''
     try:
-       worksheet = gc.open('Таблица проектов').worksheet(f'{dt.now().year}')
-    except gspread.exceptions.WorksheetNotFound:     
+        worksheet = gc.open('Таблица проектов').worksheet(f'{dt.now().year}')
+    except gspread.exceptions.WorksheetNotFound:
         spreadsheet = gc.open('Таблица проектов')
         worksheet = create_new_ws_project_archive(spreadsheet)
-    
+
     return worksheet
+
 
 def add_settings_ws(spreadsheet: Spreadsheet) -> Worksheet:
     '''Создает лист "Настройки" и форматирует его.'''
@@ -110,7 +110,7 @@ def connect_to_bonus_ws() -> Spreadsheet:
         spreadsheet.share(EMAIL2, perm_type='user', role='writer', notify=True)
         spreadsheet.share(EMAIL3, perm_type='user', role='writer', notify=True)
         spreadsheet.share(EMAIL4, perm_type='user', role='writer', notify=True)
-        worksheet = add_settings_ws(spreadsheet)
+        add_settings_ws(spreadsheet)
         sheet1 = spreadsheet.worksheet('Sheet1')
         spreadsheet.del_worksheet(sheet1)
 
@@ -121,7 +121,7 @@ def connect_to_settings_ws() -> Worksheet:
     '''Открывает лист "Настройки" из таблицы "Премирование".'''
     sheet = connect_to_bonus_ws()
     try:
-        settings = sheet.worksheet(f'Настройки')
+        settings = sheet.worksheet('Настройки')
     except gspread.exceptions.WorksheetNotFound:
         settings = add_settings_ws(sheet)
 
@@ -139,7 +139,8 @@ def color_overdue_deadline(df: DataFrame, sheet: Worksheet) -> Worksheet:
     })
     for index, row in df.iterrows():
         try:
-            end_date = dt.strptime(row['Дата окончания проекта'], '%d.%m.%Y').date()
+            end_date = dt.strptime(
+                row['Дата окончания проекта'], '%d.%m.%Y').date()
             deadline = dt.strptime(row['Дедлайн'], '%d.%m.%Y').date()
         except ValueError:
             continue
@@ -166,8 +167,8 @@ def color_comp_correction(df: DataFrame, sheet: Worksheet) -> Worksheet:
     if 'Корректировка сложности' in df.columns:
         for index, row in df.iterrows():
             if (row['Корректировка сложности']
-                and isinstance(row['Корректировка сложности'], str)
-                and row['Корректировка сложности'].isdigit()):
+                    and isinstance(row['Корректировка сложности'], str)
+                    and row['Корректировка сложности'].isdigit()):
                 sheet.format(f'J{index + 2}', {
                     'backgroundColor': {
                         'red': 1,
@@ -189,9 +190,9 @@ def create_engineer_ws(spreadsheet: Spreadsheet, engineer: str) -> Worksheet:
     sheet.update([['Отпуск/отгул/не работал(а) (в часах)']], 'Q1')
     sheet.format('A1:J1', {
         'backgroundColor': {
-        'red': 0.7,
-        'green': 1.0,
-        'blue': 0.7
+            'red': 0.7,
+            'green': 1.0,
+            'blue': 0.7
         },
         'textFormat': {
             'bold': True
@@ -227,11 +228,13 @@ def connect_to_engineer_ws(engineer: str) -> Worksheet:
         sheet = spreadsheet.worksheet(f'{engineer}')
     except gspread.exceptions.WorksheetNotFound:
         return None
-    
+
     return sheet
 
 
-def send_project_data_to_spreadsheet(df: DataFrame, engineer: str) -> Worksheet:
+def send_project_data_to_spreadsheet(
+        df: DataFrame, engineer: str
+) -> Worksheet:
     '''
     Отправляет данные с баллами в таблицу "Премирование".
     '''
@@ -242,12 +245,15 @@ def send_project_data_to_spreadsheet(df: DataFrame, engineer: str) -> Worksheet:
     except gspread.exceptions.WorksheetNotFound:
         sheet = create_engineer_ws(spreadsheet, engineer)
 
+    eng_small = df[
+        ['Страна', 'Наименование объекта', 'Шифр (ИСП)', 'Разработал', 'Баллы',
+         'Дата начала проекта', 'Дата окончания проекта', 'Дедлайн',
+         'Автоматически определенная сложность']
+    ]
 
-    eng_small = df[['Страна', 'Наименование объекта', 'Шифр (ИСП)', 'Разработал', 'Баллы',
-                    'Дата начала проекта', 'Дата окончания проекта', 'Дедлайн',
-                     'Автоматически определенная сложность']]
-    
-    sheet.update([eng_small.columns.values.tolist()] + eng_small.values.tolist())
+    sheet.update(
+        [eng_small.columns.values.tolist()] + eng_small.values.tolist()
+    )
 
     color_overdue_deadline(eng_small, sheet)
     color_comp_correction(df, sheet)
@@ -266,15 +272,16 @@ def send_quarter_data_to_spreadsheet(df: DataFrame,
     except gspread.exceptions.WorksheetNotFound:
         sheet = create_engineer_ws(spreadsheet, engineer)
 
-
-    sheet.update([df.columns.values.tolist()] + df.values.tolist(), range_name='L1:N200')
+    sheet.update([df.columns.values.tolist()] + df.values.tolist(),
+                 range_name='L1:N200')
 
 
 def send_results_data_ws(df: DataFrame) -> Worksheet:
     '''Отправляет данные о средних баллах на лист "Настройки".'''
     worksheet = connect_to_settings_ws()
 
-    worksheet.update([df.columns.values.tolist()] + df.values.tolist(), range_name='C1:D10')
+    worksheet.update([df.columns.values.tolist()] + df.values.tolist(),
+                     range_name='C1:D10')
 
     return worksheet
 
@@ -283,7 +290,8 @@ def send_bonus_data_ws(engineer: str, df: DataFrame) -> Worksheet:
     '''Отправляет данные о выполнении плана на лист проектировщика.'''
     worksheet = connect_to_engineer_ws(engineer)
 
-    worksheet.update([df.columns.values.tolist()] + df.values.tolist(), range_name='N1:P10')
+    worksheet.update([df.columns.values.tolist()] + df.values.tolist(),
+                     range_name='N1:P10')
 
     return worksheet
 
@@ -294,7 +302,7 @@ def connect_to_attendance_sheet(month: str) -> Worksheet:
         spreadsheet = gc.open_by_url(ENDPOINT)
     except gspread.exceptions.SpreadsheetNotFound:
         return None
-    
+
     try:
         worksheet = spreadsheet.worksheet(month)
     except gspread.exceptions.WorksheetNotFound:
@@ -303,7 +311,7 @@ def connect_to_attendance_sheet(month: str) -> Worksheet:
             worksheet = spreadsheet.worksheet(month)
         except gspread.exceptions.WorksheetNotFound:
             return None
-    
+
     return worksheet
 
 
@@ -315,7 +323,8 @@ def send_non_working_hours_ws(engineer: str, df: DataFrame) -> Worksheet:
 
     non_working_hours = [None if x == 0 else x for x in non_working_hours]
 
-    worksheet.update([[cell] for cell in non_working_hours],  range_name='Q2:Q5')
+    worksheet.update([[cell] for cell in non_working_hours],
+                     range_name='Q2:Q5')
 
     return worksheet
 
@@ -324,7 +333,7 @@ def send_hours_data_ws(df: DataFrame) -> Worksheet:
     '''Отправляет данные о рабочих часах на лист настроек.'''
     worksheet = connect_to_settings_ws()
 
-    worksheet.update([df.columns.values.tolist()] + df.values.tolist(), range_name='F1:R30')
+    worksheet.update([df.columns.values.tolist()] + df.values.tolist(),
+                     range_name='F1:R30')
 
     return worksheet
-

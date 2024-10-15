@@ -1,5 +1,6 @@
 from pandas.core.series import Series
 
+
 def count_sections(row: Series):
     '''Считает количество разделов.'''
     count = 0
@@ -8,10 +9,10 @@ def count_sections(row: Series):
     os = row['ОС'] == 'Есть'
     soue = row['СОУЭ'] == 'Есть'
     asv = row['Автоматизация систем вентиляции'] == 'Есть'
-    characteristics = [ps,os,soue,asv]
+    characteristics = [ps, os, soue, asv]
 
     for char in characteristics:
-        if char == True:
+        if char is True:
             count += 1
     return count
 
@@ -22,11 +23,13 @@ def imperator(row: Series) -> bool:
         return True
     return False
 
+
 def count_types(row: Series) -> int:
     '''Считает количество типов оборудования в проекте.'''
-    module_types = row['Тип оборудования  пожаротушения (Заря/Император)'].split(',')
-    count = len(module_types)
-    return count
+    module_types = row[
+        'Тип оборудования  пожаротушения (Заря/Император)'
+    ].split(',')
+    return len(module_types)
 
 
 def count_modules(row: Series) -> int:
@@ -47,12 +50,15 @@ def count_modules(row: Series) -> int:
             for integer in modules:
                 count += int(integer.strip())
             return count
-        else:
-            return None
+        return None
     return count
 
-def count_amount_directions_modules(row: Series) ->int:
-    '''Считает количество направлений с учетом, что каждый 20 модулей = 1 направлению.'''
+
+def count_amount_directions_modules(row: Series) -> int:
+    '''
+    Считает количество направлений с учетом,
+    что каждый 20 модулей = 1 направлению.
+    '''
     amount_dirs = row['Количество направлений'].strip()
     try:
         amount_dirs = int(amount_dirs)
@@ -61,10 +67,8 @@ def count_amount_directions_modules(row: Series) ->int:
     count = count_modules(row)
     if count:
         count = count // 20
-        amount = count + amount_dirs
-        return amount
+        return count + amount_dirs
     return amount_dirs
-
 
 
 def set_project_complexity(row: Series) -> int:
@@ -83,22 +87,23 @@ def set_project_complexity(row: Series) -> int:
     container_type = ['блок-контейнер', 'контейнер']
     first_type = ['школа', 'больница', 'поликлин', 'медицинские учреждения',
                   'мед. учрежд', 'цгс', 'отделение', 'комиссариат', 'гараж']
-    second_type = ['адм. здание', 'административное здание', 'жк', 'суд', 'универ']
-    third_type = ['производственное здание', 'пром. предприятие', 'выставка', 'музей', 'нии', 'завод',
-                  'модульная станция', 'станция', 'фок']
-    fourth_type = ['цод','производственное здание', 'пром. предприятие']
+    second_type = ['адм. здание', 'административное здание',
+                   'жк', 'суд', 'универ']
+    third_type = ['производственное здание', 'пром. предприятие', 'выставка',
+                  'музей', 'нии', 'завод', 'модульная станция', 'станция',
+                  'фок']
+    fourth_type = ['цод', 'производственное здание', 'пром. предприятие']
 
     for type in container_type:
         if type in row['Тип объекта'].strip().lower():
-            if has_imperator == True:
+            if has_imperator is True:
                 return 2
             return 1
     for type in first_type:
         if type in row['Тип объекта'].strip().lower():
             if (amount_sections > 0
-                or has_imperator == True
-                or amount_dirs >= 10
-            ):
+                    or has_imperator is True
+                    or amount_dirs >= 10):
                 return 2
             return 1
     for type in second_type:
@@ -109,15 +114,13 @@ def set_project_complexity(row: Series) -> int:
     for type in third_type:
         if type in row['Тип объекта'].strip().lower():
             if amount_dirs >= 18 or (
-                amount_dirs > 8 and has_imperator == True
+                amount_dirs > 8 and has_imperator is True
             ):
                 return 5
             if (amount_dirs > 8
-                or has_imperator == True
-            ):
+                    or has_imperator is True):
                 return 4
-            else:
-                return 3
+            return 3
     for type in fourth_type:
         if type in row['Тип объекта'].strip().lower():
             if amount_dirs >= 20 or (
@@ -125,15 +128,14 @@ def set_project_complexity(row: Series) -> int:
             ):
                 return 5
             return 4
-    
+
     if amount_dirs <= 4:
         return 2
     if amount_dirs < 15:
         return 3
-    if amount_dirs >=20:
+    if amount_dirs >= 20:
         return 5
     if (amount_dirs >= 15
-    or amount_sections > 0 or has_imperator == True):
+            or amount_sections > 0 or has_imperator is True):
         return 4
-    else:
-        return 3
+    return 3
