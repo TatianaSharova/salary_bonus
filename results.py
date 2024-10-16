@@ -127,6 +127,10 @@ def get_target(row: Series):
         return int(target)
     if pd.notna(row['Средние баллы/План']) and row['Нерабочие часы'] is None:
         return int(row['Средние баллы/План'])
+    if (pd.notna(row['Средние баллы/План'])
+            and row['Нерабочие часы'] == 0
+            and row['Рабочие часы'] == 0):
+        return int(row['Средние баллы/План'])
     if row['Средние баллы/План'] == 0:
         return 0
     return None
@@ -196,12 +200,21 @@ def check_none(row: Series) -> None:
     return row['План']
 
 
-def do_results(results: dict) -> None:
+def do_results(results: dict, sum_equipment: DataFrame) -> None:
     '''
     Отправляет данные о плане и премиальных баллах в таблицу.
     '''
     average_df = count_average_points(results)
-    send_results_data_ws(average_df)
+    res_df = pd.merge(
+        average_df, sum_equipment, on='Квартал', how='outer'
+    )
+    res_df['Средние баллы/План'] = res_df[
+            'Средние баллы/План'].replace({pd.NA: None, float('nan'): None})
+    res_df['Сумма заложенного оборудования'] = res_df[
+            'Сумма заложенного оборудования'].replace({pd.NA: None,
+                                                       float('nan'): None})
+
+    send_results_data_ws(res_df)
 
     engineers = list(results.keys())
     working_hours_per_quarter = get_working_hours_data(engineers)
@@ -219,13 +232,7 @@ def do_results(results: dict) -> None:
         target_df = count_target(
             key, target_with_hours_df, working_hours_per_quarter
         )
-        if key == 'Трифонова' or key == 'Фокина':
-            print(key)
-            print(target_df)
         result_df = pd.merge(target_df, value, on='Квартал', how='outer')
-        if key == 'Трифонова' or key == 'Фокина':
-            print(key)
-            print(result_df)
         result_df['Премиальные баллы'] = result_df.apply(
             calculate_bonus, axis=1)
 
@@ -240,13 +247,7 @@ def do_results(results: dict) -> None:
         result_df = result_df[['План', 'Премиальные баллы',
                                'Процент от плана']]
 
-        if key == 'Трифонова' or key == 'Фокина':
-            print(key)
-            print(result_df)
         result_df['План'] = result_df.apply(check_none, axis=1)
-        if key == 'Трифонова' or key == 'Фокина':
-            print(key)
-            print(result_df)
         result_df['План'] = result_df['План'].replace(
             {pd.NA: None, float('nan'): None}
             )

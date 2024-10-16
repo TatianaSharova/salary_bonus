@@ -2,11 +2,36 @@ from datetime import datetime as dt
 
 import pandas as pd
 from pandas.core.frame import DataFrame
+from pandas.core.indexes.period import PeriodIndex
+from pandas.core.series import Series
 
 pd.options.mode.chained_assignment = None
 
 
-def calculate_quarter_points(row: DataFrame) -> list[dict]:
+def find_period(row: DataFrame) -> PeriodIndex:
+    '''
+    Расчитывает период от даты начала и конца.
+    Дату начала берет из шифра ИСП. Дата окончания считается концом месяца.
+    '''
+    try:
+        quarters = pd.period_range(start=row['Дата начала проекта'],
+                                   end=row['Дата окончания проекта'], freq='Q')
+    except ValueError:
+        month = row['Шифр (ИСП)'][5:7]
+        year = row['Шифр (ИСП)'][:4]
+        row['Дата начала проекта'] = pd.to_datetime(f'01.{month}.{year}',
+                                                    dayfirst=True,
+                                                    format='%d.%m.%Y')
+        row['Дата окончания проекта'] = pd.to_datetime(f'28.{month}.{year}',
+                                                       dayfirst=True,
+                                                       format='%d.%m.%Y')
+        quarters = pd.period_range(start=row['Дата начала проекта'],
+                                   end=row['Дата окончания проекта'], freq='Q')
+
+    return quarters
+
+
+def calculate_quarter_points(row: Series, colomn: str) -> list[dict]:
     '''
     Производит распределение баллов по кварталам.
     Если проект был выполнен в течение одного квартала,
@@ -24,8 +49,11 @@ def calculate_quarter_points(row: DataFrame) -> list[dict]:
     if row['Дата начала проекта'] > row['Дата окончания проекта']:
         row['Дата начала проекта'], row['Дата окончания проекта'] = row['Дата окончания проекта'], row['Дата начала проекта']
 
-    quarters = pd.period_range(start=row['Дата начала проекта'],
-                               end=row['Дата окончания проекта'], freq='Q')
+    try:
+        quarters = pd.period_range(start=row['Дата начала проекта'],
+                                   end=row['Дата окончания проекта'], freq='Q')
+    except ValueError:
+        quarters = find_period(row)
 
     quarter_points = []
 
@@ -42,20 +70,21 @@ def calculate_quarter_points(row: DataFrame) -> list[dict]:
             'Дата окончания проекта'] - row['Дата начала проекта']).days + 1
 
         proportion = days_in_quarter / total_days
-        points = round(row['Баллы'] * proportion, 2)
+        points = round(row[colomn] * proportion, 2)
         quarter_points.append({
             'Шифр_ИСП': row['Шифр (ИСП)'],
             'Квартал': quarter,
-            'Баллы': points
+            colomn: points
         })
     return quarter_points
 
 
-def calculate_quarter(df: DataFrame) -> DataFrame:
+def calculate_quarter(df: DataFrame, colomn: str) -> DataFrame:
     '''
     Создает таблицу с кварталами и заработанными баллами в каждом квартале.
     '''
-    quarterly_points = df.apply(calculate_quarter_points, axis=1)
+    quarterly_points = df.apply(calculate_quarter_points,
+                                axis=1, args=(colomn,))
 
     quarterly_points = [
         item for sublist in quarterly_points for item in sublist
@@ -63,7 +92,7 @@ def calculate_quarter(df: DataFrame) -> DataFrame:
 
     quarterly_df = pd.DataFrame(quarterly_points)
 
-    result = quarterly_df.groupby('Квартал')['Баллы'].sum().reset_index()
+    result = quarterly_df.groupby('Квартал')[f'{colomn}'].sum().reset_index()
     result['Квартал'] = result['Квартал'].apply(
         lambda x: f"{x.quarter}-{x.year}"
         )

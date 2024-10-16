@@ -118,3 +118,20 @@ def count_non_working_days(start_date: dt.date, end_date: dt.date) -> int:
         current_date += timedelta(days=1)
 
     return non_working_days
+
+
+def define_integer(integer: str) -> float:
+    '''
+    Подготавливает введенные данные для дальнейших вычислений.
+    '''
+    integer = integer.replace(' ', '')
+    integer = integer.replace('\xa0', '')
+    try:
+        integer = float(integer)
+    except ValueError:
+        if ',' in integer:
+            numbers = integer.split(',')
+            integer = float(numbers[0])
+        else:
+            integer = 0
+    return integer

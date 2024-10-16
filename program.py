@@ -53,6 +53,26 @@ def correct_complexity(engineer: str,
     return engineer_projects
 
 
+def find_sum_equipment(df: DataFrame) -> DataFrame:
+    '''
+    Считает сумму заложенного оборудования по кварталам.
+    '''
+    name = 'Сумма заложенного оборудования'
+    df[name] = df[name].str.replace('\xa0', '').str.replace(',', '.')
+    df[name] = pd.to_numeric(df[name], errors='coerce')
+
+    equipment_df = df[[
+            'Шифр (ИСП)', 'Разработал', 'Дата начала проекта',
+            'Дата окончания проекта', 'Сумма заложенного оборудования'
+        ]]
+
+    quaters = calculate_quarter(equipment_df, colomn=name)
+    quaters[name] = quaters[name].apply(
+        lambda x: "{:,.2f}".format(x).replace(',', ' ')
+    )
+    return quaters
+
+
 def process_data(engineers: list[str], df: DataFrame) -> None:
     '''
     Собирает данные из архива проектов, производит расчет баллов
@@ -62,21 +82,20 @@ def process_data(engineers: list[str], df: DataFrame) -> None:
 
     for engineer in engineers:
         blocks = []
-        print(engineer)
         engineer_projects = df.loc[
             df['Разработал'].str.contains(f'{engineer}')
         ].reset_index(drop=True)
-        engineer_projects["Дедлайн"] = ''
-        engineer_projects["Автоматически определенная сложность"] = engineer_projects.apply(
+        engineer_projects['Дедлайн'] = ''
+        engineer_projects['Автоматически определенная сложность'] = engineer_projects.apply(
             set_project_complexity, axis=1
         )
-        engineer_projects["Сложность для расчета"] = engineer_projects[
-            "Автоматически определенная сложность"
+        engineer_projects['Сложность для расчета'] = engineer_projects[
+            'Автоматически определенная сложность'
         ]
 
         engineer_projects = correct_complexity(engineer, engineer_projects)
 
-        engineer_projects["Баллы"] = engineer_projects.apply(
+        engineer_projects['Баллы'] = engineer_projects.apply(
             count_points, axis=1, args=(engineer_projects, blocks)
         )
         send_project_data_to_spreadsheet(engineer_projects, engineer)
@@ -91,12 +110,15 @@ def process_data(engineers: list[str], df: DataFrame) -> None:
         ]]
 
         if not engineer_projects_filtered.empty:
-            quarters = calculate_quarter(engineer_projects_filtered)
+            quarters = calculate_quarter(engineer_projects_filtered,
+                                         colomn='Баллы')
             send_quarter_data_to_spreadsheet(quarters, engineer)
             results[engineer] = quarters
         time.sleep(10)
 
-    do_results(results)
+    sum_equipment = find_sum_equipment(df)
+
+    do_results(results, sum_equipment)
 
 
 async def main() -> None:
@@ -108,10 +130,13 @@ async def main() -> None:
 
     try:
         worksheet = connect_to_project_archive()
-    except gspread.exceptions.SpreadsheetNotFound:
+    except gspread.exceptions.SpreadsheetNotFound as err:
+        logging.error(err)
         await send_message(bot,
                            'Ошибка: таблица "Таблица проектов" не найдена.\n'
                            'Возможно название было сменено.')
+        await bot.session.close()
+        return
 
     df = pd.DataFrame(worksheet.get_all_records(numericise_ignore=['all']))
 
@@ -150,7 +175,7 @@ async def update_holidays_package():
 def setup_scheduler():
     '''
     Запускает планировщик. Задача выполнится сразу после запуска,
-    а потом будет выполняться каждый день в 10:10 утра.
+    а потом будет выполняться по вт и пт в 10:00 утра.
     '''
     scheduler = AsyncIOScheduler(timezone='Asia/Dubai')
 
@@ -179,5 +204,5 @@ if __name__ == "__main__":
 
     try:
         asyncio.get_event_loop().run_forever()
-    except (KeyboardInterrupt, SystemExit):
-        pass
+    except (KeyboardInterrupt, SystemExit) as err:
+        logging.critical(err)

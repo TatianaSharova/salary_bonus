@@ -6,7 +6,7 @@ import gspread
 from dotenv import load_dotenv
 from gspread.spreadsheet import Spreadsheet
 from gspread.worksheet import Worksheet
-from gspread_formatting import set_column_width, set_column_widths, set_frozen
+from gspread_formatting import set_column_widths, set_frozen
 from pandas.core.frame import DataFrame
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -82,7 +82,7 @@ def add_settings_ws(spreadsheet: Spreadsheet) -> Worksheet:
         'horizontalAlignment': 'CENTER',
         'verticalAlignment': 'MIDDLE'
     })
-    sheet.format(['A1', 'C1:D1', 'F1:R1'], {
+    sheet.format(['A1', 'C1:E1', 'G1:S1'], {
         'backgroundColor': {
             'red': 1,
             'green': 0.8,
@@ -92,7 +92,7 @@ def add_settings_ws(spreadsheet: Spreadsheet) -> Worksheet:
             'fontSize': 12
             }
     })
-    set_column_width(sheet, 'A', 300)
+    set_column_widths(sheet, [('A', 300), ('E', 120)])
 
     return sheet
 
@@ -281,7 +281,7 @@ def send_results_data_ws(df: DataFrame) -> Worksheet:
     worksheet = connect_to_settings_ws()
 
     worksheet.update([df.columns.values.tolist()] + df.values.tolist(),
-                     range_name='C1:D10')
+                     range_name='C1:E10')
 
     return worksheet
 
@@ -334,6 +334,6 @@ def send_hours_data_ws(df: DataFrame) -> Worksheet:
     worksheet = connect_to_settings_ws()
 
     worksheet.update([df.columns.values.tolist()] + df.values.tolist(),
-                     range_name='F1:R30')
+                     range_name='G1:S30')
 
     return worksheet
