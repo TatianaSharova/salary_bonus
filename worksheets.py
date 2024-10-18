@@ -291,7 +291,7 @@ def send_bonus_data_ws(engineer: str, df: DataFrame) -> Worksheet:
     worksheet = connect_to_engineer_ws(engineer)
 
     worksheet.update([df.columns.values.tolist()] + df.values.tolist(),
-                     range_name='N1:P10')
+                     range_name='N1:Q10')
 
     return worksheet
 
@@ -311,20 +311,6 @@ def connect_to_attendance_sheet(month: str) -> Worksheet:
             worksheet = spreadsheet.worksheet(month)
         except gspread.exceptions.WorksheetNotFound:
             return None
-
-    return worksheet
-
-
-def send_non_working_hours_ws(engineer: str, df: DataFrame) -> Worksheet:
-    '''Отправляет данные о нерабочих часах на лист проектировщика.'''
-    worksheet = connect_to_engineer_ws(engineer)
-
-    non_working_hours = df['Нерабочие часы'].values.tolist()
-
-    non_working_hours = [None if x == 0 else x for x in non_working_hours]
-
-    worksheet.update([[cell] for cell in non_working_hours],
-                     range_name='Q2:Q5')
 
     return worksheet
 

@@ -8,7 +8,7 @@ from pandas.core.series import Series
 from utils import MONTHS
 from worksheets import (connect_to_attendance_sheet, connect_to_engineer_ws,
                         send_bonus_data_ws, send_hours_data_ws,
-                        send_non_working_hours_ws, send_results_data_ws)
+                        send_results_data_ws)
 
 
 def count_average_points(res: dict) -> DataFrame:
@@ -115,7 +115,7 @@ def get_working_hours_data(engineers: list[str]) -> DataFrame:
     return count_quaterly_hours(df_work)
 
 
-def get_target(row: Series):
+def get_target(row: Series) -> int:
     '''Считает рабочий план в процентном соотношении от рабочего времени.'''
     if (pd.notna(row['Средние баллы/План'])
             and pd.notna(row['Нерабочие часы'])
@@ -161,6 +161,7 @@ def search_for_hours(engineer: str, average_df: DataFrame) -> DataFrame:
         average_df['План'] = average_df['Средние баллы/План']
         average_df['План'] = average_df['План'].replace(
             {pd.NA: None, float('nan'): None})
+        average_df['Нерабочие часы'] = 0
         return average_df
     return None
 
@@ -186,18 +187,18 @@ def count_target(engineer: str,
 
     average_df['План'] = average_df.apply(get_target, axis=1)
 
-    send_non_working_hours_ws(engineer, average_df)
+    # send_non_working_hours_ws(engineer, average_df)
 
     return average_df
 
 
-def check_none(row: Series) -> None:
+def check_none(row: Series, colomn: str) -> None:
     '''Проверяет, являются ли столбцы 'Премиальные баллы' и 'Процент от плана'
     пустыми. Если они пустые, то столбец 'План' тоже становится пустым(None).
     '''
     if row['Премиальные баллы'] is None and row['Процент от плана'] is None:
         return None
-    return row['План']
+    return row[colomn]
 
 
 def do_results(results: dict, sum_equipment: DataFrame) -> None:
@@ -243,12 +244,22 @@ def do_results(results: dict, sum_equipment: DataFrame) -> None:
 
         result_df['Процент от плана'] = result_df['Процент от плана'].replace(
             {pd.NA: None, float('nan'): None})
+        result_df = result_df.rename(columns={
+            'Нерабочие часы': 'Отпуск/отгул/не работал(а) (в часах)'
+        })
 
         result_df = result_df[['План', 'Премиальные баллы',
-                               'Процент от плана']]
+                               'Процент от плана',
+                               'Отпуск/отгул/не работал(а) (в часах)']]
 
-        result_df['План'] = result_df.apply(check_none, axis=1)
+        result_df['План'] = result_df.apply(check_none, axis=1, args=('План',))
+        result_df['Отпуск/отгул/не работал(а) (в часах)'] = result_df.apply(
+            check_none, axis=1, args=('Отпуск/отгул/не работал(а) (в часах)',))
         result_df['План'] = result_df['План'].replace(
+            {pd.NA: None, float('nan'): None}
+            )
+        result_df['Отпуск/отгул/не работал(а) (в часах)'] = result_df[
+            'Отпуск/отгул/не работал(а) (в часах)'].replace(
             {pd.NA: None, float('nan'): None}
             )
 
