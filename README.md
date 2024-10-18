@@ -300,5 +300,4 @@ git push
 После окончания деплоя и каждый раз после выполнения расчета тг-бот будет слать уведомление об этом. Также тг-бот должен присылать уведомление об ошибках, если они случатся во время подсчета баллов.
 
 
-я в тг: [tatiana_ssharova](https://t.me/tatiana_ssharova)                                                                       
-на [гитхабе](https://github.com/TatianaSharova)
+я в тг: [tatiana_ssharova](https://t.me/tatiana_ssharova)
