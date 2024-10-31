@@ -153,9 +153,9 @@ async def main() -> None:
                 await send_message(bot, f'{error}')
                 logging.error(error)
                 raise TooManyRequestsApiError(error)
-            # except Exception as error:
-            #     logging.error(error)
-            #     await send_message(bot, f'Ошибка: {error}')
+            except Exception as error:
+                logging.error(error)
+                await send_message(bot, f'Ошибка: {error}')
 
     await bot.session.close()
 
