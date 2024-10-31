@@ -65,10 +65,12 @@ def find_sum_equipment(df: DataFrame) -> DataFrame:
             'Шифр (ИСП)', 'Разработал', 'Дата начала проекта',
             'Дата окончания проекта', 'Сумма заложенного оборудования'
         ]]
+    equipment_df_filt = equipment_df.dropna(subset=[name])
+    equipment_df_filt = equipment_df_filt[equipment_df_filt['Шифр (ИСП)'] != '']
 
-    quaters = calculate_quarter(equipment_df, colomn=name)
+    quaters = calculate_quarter(equipment_df_filt, colomn=name)
     quaters[name] = quaters[name].apply(
-        lambda x: "{:,.2f}".format(x).replace(',', ' ')
+        lambda x: '{:,.2f}'.format(x).replace(',', ' ')
     )
     return quaters
 
@@ -151,9 +153,9 @@ async def main() -> None:
                 await send_message(bot, f'{error}')
                 logging.error(error)
                 raise TooManyRequestsApiError(error)
-            except Exception as error:
-                logging.error(error)
-                await send_message(bot, f'Ошибка: {error}')
+            # except Exception as error:
+            #     logging.error(error)
+            #     await send_message(bot, f'Ошибка: {error}')
 
     await bot.session.close()
 

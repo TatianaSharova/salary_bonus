@@ -20,10 +20,8 @@ def find_period(row: DataFrame) -> PeriodIndex:
         month = row['Шифр (ИСП)'][5:7]
         year = row['Шифр (ИСП)'][:4]
         row['Дата начала проекта'] = pd.to_datetime(f'01.{month}.{year}',
-                                                    dayfirst=True,
                                                     format='%d.%m.%Y')
         row['Дата окончания проекта'] = pd.to_datetime(f'28.{month}.{year}',
-                                                       dayfirst=True,
                                                        format='%d.%m.%Y')
         quarters = pd.period_range(start=row['Дата начала проекта'],
                                    end=row['Дата окончания проекта'], freq='Q')

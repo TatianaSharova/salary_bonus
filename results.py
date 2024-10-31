@@ -52,7 +52,7 @@ def count_percent(row: Series) -> str:
     return None
 
 
-def count_quaterly_hours(df: DataFrame):
+def count_quaterly_hours(df: DataFrame) -> DataFrame:
     '''Суммирует часы по кварталам.'''
     quarters = {
         f'1-{dt.now().year}': [MONTHS['1'], MONTHS['2'], MONTHS['3']],
@@ -186,8 +186,6 @@ def count_target(engineer: str,
         ] - new_df[f'{engineer}']
 
     average_df['План'] = average_df.apply(get_target, axis=1)
-
-    # send_non_working_hours_ws(engineer, average_df)
 
     return average_df
 
