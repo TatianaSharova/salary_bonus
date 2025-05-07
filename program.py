@@ -1,5 +1,4 @@
 import asyncio
-import logging
 import subprocess
 import time
 from datetime import datetime, timedelta
@@ -14,7 +13,7 @@ from pytz import timezone
 
 from complexity import set_project_complexity
 from counting_points import count_points
-from exceptions import TooManyRequestsApiError
+from logger import logging
 from quaterly_points import calculate_quarter
 from results import do_results
 from utils import TELEGRAM_TOKEN, get_list_of_engineers, is_point, send_message
@@ -24,11 +23,6 @@ from worksheets import (connect_to_engineer_ws, connect_to_project_archive,
 
 pd.options.mode.chained_assignment = None
 pd.set_option('future.no_silent_downcasting', True)
-
-logging.basicConfig(
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-    level=logging.INFO
-)
 
 
 def correct_complexity(engineer: str,
@@ -83,6 +77,7 @@ def process_data(engineers: list[str], df: DataFrame) -> None:
     results = {}
 
     for engineer in engineers:
+        logging.info(f'Начинается расчет для проектировщика {engineer}.')
         blocks = []
         engineer_projects = df.loc[
             df['Разработал'].str.contains(f'{engineer}')
@@ -143,19 +138,20 @@ async def main() -> None:
     df = pd.DataFrame(worksheet.get_all_records(numericise_ignore=['all']))
 
     if not df.empty:
-        list_of_engineers = get_list_of_engineers(df, colomn='Разработал')
-        if list_of_engineers != []:
-            try:
+        try:
+            list_of_engineers = get_list_of_engineers(df, colomn='Разработал')
+            logging.info(f'Список проектировщиков, для которых нужен расчет: '
+                         f'{list_of_engineers}')
+            if list_of_engineers != []:
                 process_data(list_of_engineers, df)
                 await send_message(bot, 'Расчет баллов успешно выполнен.')
                 logging.info('Программа успешно выполнила работу.')
-            except gspread.exceptions.APIError as error:
-                await send_message(bot, f'{error}')
-                logging.error(error)
-                raise TooManyRequestsApiError(error)
-            except Exception as error:
-                logging.error(error)
-                await send_message(bot, f'Ошибка: {error}')
+        except gspread.exceptions.APIError as error:
+            logging.error(error)
+            await send_message(bot, f'{error}')
+        except Exception as error:
+            logging.error(error)
+            await send_message(bot, f'Ошибка: {error}')
 
     await bot.session.close()
 
