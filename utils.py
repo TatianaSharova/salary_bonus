@@ -10,6 +10,7 @@ from dotenv import load_dotenv
 from pandas.core.frame import DataFrame
 
 from exceptions import TelegramSendMessageError
+from logger import logging
 from worksheets import connect_to_settings_ws
 
 pd.options.mode.chained_assignment = None
@@ -56,7 +57,11 @@ def non_count_engineers() -> list[str]:
     df = sheet.get('A1:A20')
     non_count_eng = pd.DataFrame(df[1:], columns=df[0])
     if not non_count_eng.empty:
-        return non_count_eng['Не учитывать'].tolist()
+        non_count_eng_list = non_count_eng['Не учитывать'].tolist()
+        logging.info(
+            f'Cписок проектировщиков, для которых не '
+            f'надо делать расчет: {non_count_eng_list}')
+        return non_count_eng_list
     return None
 
 
