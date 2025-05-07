@@ -4,3 +4,7 @@ class TooManyRequestsApiError(Exception):
 
 class TelegramSendMessageError(Exception):
     pass
+
+
+class NonValidEmailsError(Exception):
+    pass
