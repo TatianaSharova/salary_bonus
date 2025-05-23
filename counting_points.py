@@ -1,5 +1,6 @@
 from datetime import datetime as dt
 from datetime import timedelta
+from typing import Union
 
 import holidays
 import pandas as pd
@@ -182,9 +183,9 @@ def calculate_deadline(start_date: dt.date, work_days: int,
 
 
 def check_spend_time(row: Series, points: int,
-                     df: DataFrame, amount: int) -> int:
+                     df: DataFrame, amount: int) -> Union[float, str]:
     '''
-    Проверка на соблюдение дэдлайнов проекта.
+    Проверка на соблюдение дедлайнов проекта.
     Если проект выполнен в срок из расчета 1 балл = 5 рабочим дням,
     остаются те же баллы. Если дедлайн был просрочен, полученные
     баллы умножаются на понижающий коэффициент.
@@ -262,7 +263,9 @@ def count_block(row: Series, blocks: list,
     return points
 
 
-def count_points(row: Series, df: DataFrame, blocks: list) -> int:
+def count_points(
+        row: Series, df: DataFrame, blocks: list
+) -> Union[int, str]:
     '''
     Считает и возвращает сумму полученных баллов.
     Если подсчет произвести невозможно, то возвращает
@@ -291,7 +294,7 @@ def count_points(row: Series, df: DataFrame, blocks: list) -> int:
     return check_spend_time(row, points, df, amount=0)
 
 
-def count_adjusting_points(row: Series, df: DataFrame, blocks: list):
+def count_adjusting_points(row: Series, df: DataFrame, blocks: list) -> float:
     '''
     Расчитывает баллы за корректировки:
     30 процентов от баллов за готовый проект.
@@ -307,7 +310,9 @@ def count_adjusting_points(row: Series, df: DataFrame, blocks: list):
     points += check_cultural_heritage(row)
     points += check_net(row)
     points = round(points/check_authors(row['Разработал']), 1)
-
     points = check_spend_time(row, points, df, amount=0)
+
+    if isinstance(points, str):
+        return points
 
     return points*0.3
