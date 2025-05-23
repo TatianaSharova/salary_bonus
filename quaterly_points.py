@@ -45,7 +45,7 @@ def calculate_quarter_points(row: Series, colomn: str) -> list[dict]:
         row['Дата окончания проекта'], dayfirst=True, format='%d.%m.%Y')
 
     if row['Дата начала проекта'] > row['Дата окончания проекта']:
-        row['Дата начала проекта'], row['Дата окончания проекта'] = row['Дата окончания проекта'], row['Дата начала проекта']
+        row['Дата начала проекта'], row['Дата окончания проекта'] = row['Дата окончания проекта'], row['Дата начала проекта']  # noqa: E501
 
     try:
         quarters = pd.period_range(start=row['Дата начала проекта'],
