@@ -151,10 +151,10 @@ async def main() -> None:
                 await send_message(bot, 'Расчет баллов успешно выполнен.')
                 logging.info('Программа успешно выполнила работу.')
         except gspread.exceptions.APIError as error:
-            logging.error(error)
+            logging.exception(error)
             await send_message(bot, f'{error}')
         except Exception as error:
-            logging.error(error)
+            logging.exception(error)
             await send_message(bot, f'Ошибка: {error}')
 
     await bot.session.close()
