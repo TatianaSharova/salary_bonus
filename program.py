@@ -60,7 +60,7 @@ def find_sum_equipment(df: DataFrame) -> DataFrame:
             'Дата окончания проекта', 'Сумма заложенного оборудования'
         ]]
     equipment_df_filt = equipment_df.dropna(subset=[name])
-    equipment_df_filt = equipment_df_filt[equipment_df_filt['Шифр (ИСП)'] != '']
+    equipment_df_filt = equipment_df_filt[equipment_df_filt['Шифр (ИСП)'] != '']  # noqa: E501
 
     quaters = calculate_quarter(equipment_df_filt, colomn=name)
     quaters[name] = quaters[name].apply(
@@ -73,7 +73,7 @@ def process_data(engineers: list[str], df: DataFrame) -> None:
     '''
     Собирает данные из архива проектов, производит расчет баллов
     и отправляет полученные данные в таблицу "Премирование"
-    
+
     Для тех проектировщиков, для которых удалось посчитать баллы за проекты,
     выводится информация с данными о баллах по кварталам на его листе,
     а также происходит сбор информации о рабочих часах с листа посещаемости.
@@ -87,7 +87,7 @@ def process_data(engineers: list[str], df: DataFrame) -> None:
             df['Разработал'].str.contains(f'{engineer}')
         ].reset_index(drop=True)
         engineer_projects['Дедлайн'] = ''
-        engineer_projects['Автоматически определенная сложность'] = engineer_projects.apply(
+        engineer_projects['Автоматически определенная сложность'] = engineer_projects.apply(  # noqa: E501
             set_project_complexity, axis=1
         )
         engineer_projects['Сложность для расчета'] = engineer_projects[
