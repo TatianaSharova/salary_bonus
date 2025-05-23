@@ -71,7 +71,7 @@ def count_amount_directions_modules(row: Series) -> int:
     return amount_dirs
 
 
-def set_project_complexity(row: Series) -> int:
+def set_project_complexity(row: Series) -> int:  # noqa: C901
     '''
     Устанавливает сложность объекта.
     Сложность расчитывается от 1 до 5.
