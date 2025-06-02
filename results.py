@@ -5,6 +5,7 @@ import pandas as pd
 from pandas.core.frame import DataFrame
 from pandas.core.series import Series
 
+from logger import logging
 from utils import MONTHS
 from worksheets import (connect_to_attendance_sheet, connect_to_engineer_ws,
                         send_bonus_data_ws, send_hours_data_ws,
@@ -15,6 +16,8 @@ def count_average_points(res: dict) -> DataFrame:
     '''
     Считает среднее арифметическое количество набранных баллов в кварталах.
     '''
+    logging.info('Расчет среднего арифметического количества '
+                 'набранных баллов по кварталам.')
     merged_df = pd.concat(res.values(), ignore_index=True)
 
     filtered_df = merged_df[merged_df['Квартал'].str.contains(
@@ -77,28 +80,31 @@ def count_quaterly_hours(df: DataFrame) -> DataFrame:
 
 def get_working_hours_data(engineers: list[str]) -> DataFrame:
     '''Собирает данные о рабочих часах проектировщиков.'''
+    logging.info('Сбор данных о рабочих часах проектировщиков.')
     current_month = dt.now().month
-
+    monthly_data = {}
     months_list = list(MONTHS.values())
     columns = ['Имя'] + months_list
     df = pd.DataFrame(columns=columns)
 
-    for engineer in engineers:
-        num = 1
-        engineer_work = {'Имя': f'{engineer}'}
-        while num <= current_month:
-            worksheet = connect_to_attendance_sheet(MONTHS[f'{num}'])
-            if worksheet:
-                raw_data = worksheet.get('A1:T136')
-                data = pd.DataFrame(raw_data[1:], columns=raw_data[0])
-                filtered_df = data[data['Фамилия Имя Отчество '].str.contains(
-                    f'{engineer}', na=False)]
-                if not filtered_df.empty:
-                    hours = filtered_df['Часы'].values[0]
-                    engineer_work[f'{MONTHS[str(num)]}'] = hours
-            num += 1
-        df = pd.concat([df, pd.DataFrame([engineer_work])], ignore_index=True)
+    for num in range(1, current_month + 1):
+        worksheet = connect_to_attendance_sheet(MONTHS[str(num)])
+        if worksheet:
+            raw_data = worksheet.get('A1:T160')
+            data = pd.DataFrame(raw_data[1:], columns=raw_data[0])
+            monthly_data[MONTHS[str(num)]] = data
         time.sleep(5)
+
+    for engineer in engineers:
+        engineer_work = {'Имя': f'{engineer}'}
+        for month_name, data in monthly_data.items():
+            filtered_df = data[
+                data['Фамилия Имя Отчество '].str.contains(f'{engineer}', na=False)
+            ]
+            if not filtered_df.empty:
+                hours = filtered_df['Часы'].values[0]
+                engineer_work[month_name] = hours
+        df = pd.concat([df, pd.DataFrame([engineer_work])], ignore_index=True)
 
     df.iloc[:, 1:] = df.iloc[:, 1:].apply(pd.to_numeric, errors='coerce')
 
@@ -142,6 +148,8 @@ def search_for_hours(engineer: str, average_df: DataFrame) -> DataFrame:
     и корректирует рабочий план в том случае,
     если информации о проектировщике нет в табеле посещаемости офиса.
     '''
+    logging.info(f'В табеле посещаемости нет данных о рабочих часах {engineer}. '
+                 f'Ищем информацию о нерабочих часах на листе проектировщика.')
     worksheet = connect_to_engineer_ws(engineer)
 
     if worksheet:
@@ -149,6 +157,7 @@ def search_for_hours(engineer: str, average_df: DataFrame) -> DataFrame:
         non_working_hours_per_quarter = pd.DataFrame(
             raw_data[1:], columns=raw_data[0])
         if not non_working_hours_per_quarter.empty:
+            logging.info('Нерабочие часы с листа проектировщика учтены.')
             average_df['Нерабочие часы'] = non_working_hours_per_quarter[
                 'Отпуск/отгул/не работал(а) (в часах)'
             ]
@@ -157,11 +166,17 @@ def search_for_hours(engineer: str, average_df: DataFrame) -> DataFrame:
             average_df['План'] = average_df.apply(get_target, axis=1)
             average_df['План'] = average_df['План'].replace(
                 {pd.NA: None, float('nan'): None})
+            logging.info(
+                'Подсчет рабочего плана в зависимости от рабочих часов завершен.')
             return average_df
+        logging.info('Нерабочие часы на листе не указаны. Считаем, '
+                     'что были отработаны все часы.')
         average_df['План'] = average_df['Средние баллы/План']
         average_df['План'] = average_df['План'].replace(
             {pd.NA: None, float('nan'): None})
         average_df['Нерабочие часы'] = 0
+        logging.info(
+            'Подсчет рабочего плана в зависимости от рабочих часов завершен.')
         return average_df
     return None
 
@@ -170,6 +185,8 @@ def count_target(engineer: str,
                  average_df: DataFrame,
                  df_hours: DataFrame) -> DataFrame:
     '''Рассчитывает рабочий план в зависимости от рабочих часов.'''
+    logging.info(f'Начинаем подсчет рабочего плана в зависимости '
+                 f'от рабочих часов для {engineer}.')
     filtered_df = df_hours[df_hours['Имя'] == engineer]
 
     if (filtered_df.iloc[0, 1:] == 0).all():
@@ -186,7 +203,7 @@ def count_target(engineer: str,
         ] - new_df[f'{engineer}']
 
     average_df['План'] = average_df.apply(get_target, axis=1)
-
+    logging.info('Подсчет рабочего плана в зависимости от рабочих часов завершен.')
     return average_df
 
 
@@ -203,6 +220,7 @@ def do_results(results: dict, sum_equipment: DataFrame) -> None:
     '''
     Отправляет данные о плане и премиальных баллах в таблицу.
     '''
+    logging.info('Начинаем подсчет квартального плана и премиальных баллов.')
     average_df = count_average_points(results)
     res_df = pd.merge(
         average_df, sum_equipment, on='Квартал', how='outer'
@@ -227,10 +245,11 @@ def do_results(results: dict, sum_equipment: DataFrame) -> None:
         average_df, full_time_work_hours, on='Квартал', how='outer'
     )
 
-    for key, value in results.items():
+    for engineer_name, value in results.items():
         target_df = count_target(
-            key, target_with_hours_df, working_hours_per_quarter
+            engineer_name, target_with_hours_df, working_hours_per_quarter
         )
+        logging.info('Подсчет премиальных баллов.')
         result_df = pd.merge(target_df, value, on='Квартал', how='outer')
         result_df['Премиальные баллы'] = result_df.apply(
             calculate_bonus, axis=1)
@@ -238,6 +257,7 @@ def do_results(results: dict, sum_equipment: DataFrame) -> None:
         result_df['Премиальные баллы'] = result_df[
             'Премиальные баллы'].replace({pd.NA: None, float('nan'): None})
 
+        logging.info('Подсчет процента полученных баллов от плана.')
         result_df['Процент от плана'] = result_df.apply(count_percent, axis=1)
 
         result_df['Процент от плана'] = result_df['Процент от плана'].replace(
@@ -261,4 +281,4 @@ def do_results(results: dict, sum_equipment: DataFrame) -> None:
             {pd.NA: None, float('nan'): None}
             )
 
-        send_bonus_data_ws(key, result_df)
+        send_bonus_data_ws(engineer_name, result_df)
