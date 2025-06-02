@@ -276,7 +276,7 @@ def count_points(
     if not filled_project:
         return 'Необходимо заполнить данные для расчёта'
     if 'да' in row['Является корректировкой'].strip().lower():
-        return count_adjusting_points(row, df, blocks)
+        return count_adjusting_points(row, df)
 
     complexity = int(row['Сложность для расчета'])
 
@@ -294,7 +294,7 @@ def count_points(
     return check_spend_time(row, points, df, amount=0)
 
 
-def count_adjusting_points(row: Series, df: DataFrame, blocks: list) -> float:
+def count_adjusting_points(row: Series, df: DataFrame) -> float:
     '''
     Расчитывает баллы за корректировки:
     30 процентов от баллов за готовый проект.
