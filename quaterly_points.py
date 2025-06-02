@@ -5,6 +5,8 @@ from pandas.core.frame import DataFrame
 from pandas.core.indexes.period import PeriodIndex
 from pandas.core.series import Series
 
+from logger import logging
+
 pd.options.mode.chained_assignment = None
 
 
@@ -81,6 +83,8 @@ def calculate_quarter(df: DataFrame, colomn: str) -> DataFrame:
     '''
     Создает таблицу с кварталами и заработанными баллами в каждом квартале.
     '''
+    logging.info('Распределение заработанных баллов/'
+                 'суммы заложенного оборудования по кварталам.')
     quarterly_points = df.apply(calculate_quarter_points,
                                 axis=1, args=(colomn,))
 
