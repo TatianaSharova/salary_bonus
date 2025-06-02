@@ -31,6 +31,7 @@ def correct_complexity(engineer: str,
     Берёт данные о корректировке сложности из таблицы проектировщика
     и заменяет неверные данные.
     '''
+    logging.info('Проверка на необходимость корректировки сложности проектов.')
     worksheet = connect_to_engineer_ws(engineer)
 
     if worksheet:
@@ -44,6 +45,9 @@ def correct_complexity(engineer: str,
                 engineer_projects['Сложность для расчета'] = engineer_projects[
                     'Корректировка сложности'
                 ].combine_first(engineer_projects['Сложность для расчета'])
+                logging.info('Скорректировали сложность проектов '
+                             'по данным с листа проектировщика.')
+        logging.info('Корректировка сложности не нужна.')
     return engineer_projects
 
 
@@ -51,6 +55,7 @@ def find_sum_equipment(df: DataFrame) -> DataFrame:
     '''
     Считает сумму заложенного оборудования по кварталам.
     '''
+    logging.info('Начинаем подсчет суммы заложенного оборудования по кварталам.')
     name = 'Сумма заложенного оборудования'
     df[name] = df[name].str.replace('\xa0', '').str.replace(',', '.')
     df[name] = pd.to_numeric(df[name], errors='coerce')
@@ -81,21 +86,23 @@ def process_data(engineers: list[str], df: DataFrame) -> None:
     results = {}
 
     for engineer in engineers:
-        logging.info(f'Начинается расчет для проектировщика {engineer}.')
+        logging.info(f'Начинается расчет баллов для проектировщика {engineer}.')
         blocks = []
         engineer_projects = df.loc[
             df['Разработал'].str.contains(f'{engineer}')
         ].reset_index(drop=True)
         engineer_projects['Дедлайн'] = ''
+
+        logging.info('Определение сложности проектов.')
         engineer_projects['Автоматически определенная сложность'] = engineer_projects.apply(  # noqa: E501
             set_project_complexity, axis=1
         )
         engineer_projects['Сложность для расчета'] = engineer_projects[
             'Автоматически определенная сложность'
         ]
-
         engineer_projects = correct_complexity(engineer, engineer_projects)
 
+        logging.info('Подсчет баллов за проекты.')
         engineer_projects['Баллы'] = engineer_projects.apply(
             count_points, axis=1, args=(engineer_projects, blocks)
         )
@@ -115,6 +122,11 @@ def process_data(engineers: list[str], df: DataFrame) -> None:
                                          colomn='Баллы')
             send_quarter_data_to_spreadsheet(quarters, engineer)
             results[engineer] = quarters
+            logging.info(f'Расчет баллов для проектировщика {engineer} завершен. '
+                         f'Ждем 10 секунд.')
+        else:
+            logging.info(f'Нет готовых проектов у проектировщика {engineer}. '
+                         f'Переходим к следующему проектировщику через 10 секунд.')
         time.sleep(10)
 
     sum_equipment = find_sum_equipment(df)
@@ -132,7 +144,7 @@ async def main() -> None:
     try:
         worksheet = connect_to_project_archive()
     except gspread.exceptions.SpreadsheetNotFound as err:
-        logging.error(err)
+        logging.exception(err)
         await send_message(bot,
                            'Ошибка: таблица "Таблица проектов" не найдена.\n'
                            'Возможно название было сменено.')
@@ -169,9 +181,9 @@ async def update_holidays_package():
                        check=True)
         logging.info('Библиотека holidays была обновлена.')
     except subprocess.CalledProcessError as error:
-        logging.warning('Библиотека holidays не обновлена.')
+        logging.exception(f'Библиотека holidays не обновлена: {error}')
         await send_message(aiogram.Bot(token=TELEGRAM_TOKEN),
-                           f'Ошибка: {error}')
+                           f'Ошибка при обновлении holidays library: {error}')
 
 
 def setup_scheduler():
