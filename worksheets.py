@@ -143,6 +143,7 @@ def connect_to_settings_ws() -> Worksheet:
 
 def color_overdue_deadline(df: DataFrame, sheet: Worksheet) -> None:
     '''Окрашивает ячейки с просроченным дедлайном.'''
+    logging.info('Окраска ячеек в столбце "Дедлайн" с просроченным дедлайном.')
     sheet.format('H2:H200', {
         'backgroundColor': {
             'red': 1,
@@ -182,6 +183,8 @@ def color_overdue_deadline(df: DataFrame, sheet: Worksheet) -> None:
 
 def color_comp_correction(df: DataFrame, sheet: Worksheet) -> None:
     '''Окрашивает ячейки с учтенной коррекцией сложности.'''
+    logging.info('Окраска ячеек с учтенной коррекцией сложности '
+                 'в столбце "Корректировка сложности".')
     sheet.format('J2:J200', {
         'backgroundColor': {
             'red': 1,
@@ -291,6 +294,7 @@ def send_project_data_to_spreadsheet(
     '''
     Отправляет данные с баллами в таблицу "Премирование".
     '''
+    logging.info('Отправка данных о проектах на лист проектировщика.')
     sheet = connect_to_engineer_ws_or_create(engineer)
 
     eng_small = df[
@@ -313,9 +317,9 @@ def send_quarter_data_to_spreadsheet(df: DataFrame,
     Отсылает данные о баллах, заработанных в каждом квартале
     в таблицу "Премирование".
     '''
+    logging.info('Отправка данных о баллах по кварталам на лист проектировщика.')
     sheet = connect_to_engineer_ws_or_create(engineer)
 
-    logging.info('Отправка данных о баллах по кварталам.')
     sheet.update([df.columns.values.tolist()] + df.values.tolist(),
                  range_name='L1:N200')
 
@@ -335,7 +339,7 @@ def send_bonus_data_ws(engineer: str, df: DataFrame) -> Worksheet:
     '''Отправляет данные о выполнении плана на лист проектировщика.'''
     worksheet = connect_to_engineer_ws_or_create(engineer)
 
-    logging.info(f'Отправка данных о выполнении плана {engineer}.')
+    logging.info(f'Отправка данных о выполнении плана проектировщика {engineer}.')
     worksheet.update([df.columns.values.tolist()] + df.values.tolist(),
                      range_name='N1:Q10')
 
