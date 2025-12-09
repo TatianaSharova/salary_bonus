@@ -189,7 +189,7 @@ async def update_holidays_package():
 def setup_scheduler():
     '''
     Запускает планировщик. Задача выполнится сразу после запуска,
-    а потом будет выполняться по вт и пт в 10:00 утра.
+    а потом будет каждый день в 10:00 утра.
     '''
     scheduler = AsyncIOScheduler(timezone='Asia/Dubai')
 
@@ -197,17 +197,16 @@ def setup_scheduler():
 
     scheduler.add_job(
         main, trigger='date',
-        next_run_time=datetime.now(samara_tz)+timedelta(seconds=5),
+        next_run_time=datetime.now(samara_tz)+timedelta(seconds=2),
         misfire_grace_time=120)
 
     scheduler.add_job(
-        main, CronTrigger(day_of_week='tue,fri',
-                          hour=10, minute=0, timezone=samara_tz),
+        main, CronTrigger(hour=10, minute=0, timezone=samara_tz),
         misfire_grace_time=60)
 
     scheduler.add_job(
         update_holidays_package,
-        'cron', month=12, day=1, hour=9, minute=0,
+        'cron', month='6,12', day=1, hour=9, minute=0,
         misfire_grace_time=60, timezone=samara_tz)
 
     scheduler.start()
@@ -218,5 +217,7 @@ if __name__ == "__main__":
 
     try:
         asyncio.get_event_loop().run_forever()
-    except (KeyboardInterrupt, SystemExit) as err:
+    except KeyboardInterrupt as err:
+        pass
+    except SystemExit as err:
         logging.critical(err)

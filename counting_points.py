@@ -222,7 +222,7 @@ def check_spend_time(row: Series, points: int,
     return points
 
 
-def count_deadline_for_blocks(row: Series, df: DataFrame, points):
+def count_deadline_for_blocks(row: Series, df: DataFrame, points: int):
     '''Отсортировывает блок-контейнеры по группам,
     чтобы посчитать для них общий дедлайн.
     Для одиночных контейнеров дедлайн считается, как для обычных проектов.
@@ -239,14 +239,11 @@ def count_deadline_for_blocks(row: Series, df: DataFrame, points):
     num_rows = filtered_df.shape[0]
 
     if num_rows == 1:
-        row['Тип объекта'] = 'единственный контейн-р'
-        return check_spend_time(row, points, df, amount=num_rows)
-    if num_rows > 1:
-        return check_spend_time(row, points, df, amount=num_rows)
-    return None
+        row['Тип объекта'] = 'единственный контейнер'
+    return check_spend_time(row, points, df, amount=num_rows)
 
 
-def count_block(row: Series, blocks: list,
+def count_block(row: Series, blocks: list[str],
                 points: int, df: DataFrame) -> float:
     '''
     Расчитывает баллы для блок-контейнеров.
@@ -258,7 +255,8 @@ def count_block(row: Series, blocks: list,
     points = count_deadline_for_blocks(row, df, points)
 
     if name in blocks:
-        return 0.5*points
+        if isinstance(points, float):
+            return 0.5*points
     blocks.append(name)
     return points
 

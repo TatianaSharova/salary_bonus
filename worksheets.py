@@ -350,7 +350,7 @@ def connect_to_attendance_sheet(month: str) -> Worksheet:
     '''Подключается к табелю посещаемости офиса.'''
     logging.info(f'Подключение к табелю посещаемости лист {month}.')
     try:
-        spreadsheet = gc.open_by_url(ENDPOINT_ATTENDANCE_SHEET)
+        spreadsheet: Spreadsheet = gc.open_by_url(ENDPOINT_ATTENDANCE_SHEET)
     except gspread.exceptions.SpreadsheetNotFound:
         logging.info('Табель посещаемости не найден.')
         raise gspread.exceptions.SpreadsheetNotFound(
@@ -361,12 +361,8 @@ def connect_to_attendance_sheet(month: str) -> Worksheet:
     try:
         worksheet = spreadsheet.worksheet(month)
     except gspread.exceptions.WorksheetNotFound:
-        try:
-            month = month + ' '
-            worksheet = spreadsheet.worksheet(month)
-        except gspread.exceptions.WorksheetNotFound:
-            logging.error(f'Лист {month} не найден.')
-            return None
+        logging.error(f'Лист {month} не найден.')
+        return None
 
     return worksheet
 
