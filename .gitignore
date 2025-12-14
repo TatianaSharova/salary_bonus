@@ -16,8 +16,6 @@ venv.bak/
 # test files
 test/
 test.py
-test1.py
-
 
 # debug
 /.vscode
@@ -28,5 +26,6 @@ test1.py
 # google
 creds.json
 
-# cron
-crontab
+# cline
+.clinerules
+.clineignore

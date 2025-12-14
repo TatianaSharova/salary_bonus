@@ -1,8 +1,8 @@
 import aiogram
 from aiogram.exceptions import TelegramAPIError
 
-from config.environment import TELEGRAM_CHAT_ID, TELEGRAM_TOKEN
-from exceptions import TelegramSendMessageError
+from src.config.environment import TELEGRAM_CHAT_ID, TELEGRAM_TOKEN
+from src.exceptions import TelegramSendMessageError
 
 tg_bot = aiogram.Bot(token=TELEGRAM_TOKEN)
 

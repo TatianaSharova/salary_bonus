@@ -1,4 +1,3 @@
-import time
 from datetime import datetime as dt
 
 import gspread
@@ -6,10 +5,20 @@ from gspread.spreadsheet import Spreadsheet
 from gspread.worksheet import Worksheet
 from pandas.core.frame import DataFrame
 
-from config.environment import CREDS_PATH, EMAILS, ENDPOINT_ATTENDANCE_SHEET
-from exceptions import NonValidEmailsError
-from logger import logging
-from worksheets.utils import (
+from src.config.defaults import (
+    AFTER_FORMAT_SLEEP,
+    ARCHIVE_CURRENT_WS,
+    BONUS_WS,
+    ENG_WS_COL_NAMES,
+    FIRST_SHEET,
+    PROJECT_ARCHIVE,
+    SETTINGS_WS,
+)
+from src.config.environment import CREDS_PATH, EMAILS, ENDPOINT_ATTENDANCE_SHEET
+from src.exceptions import NonValidEmailsError
+from src.logger import logging
+from src.worksheets.google_sheets_manager import sheets_manager
+from src.worksheets.utils import (
     color_comp_correction,
     color_overdue_deadline,
     format_new_engineer_ws,
@@ -30,7 +39,7 @@ def create_new_ws_project_archive(spreadsheet: Spreadsheet) -> Worksheet:
     source_sheet_title = source_sheet.title
 
     destination_spreadsheet_id = spreadsheet.id
-    source_sheet.copy_to(f"{destination_spreadsheet_id}")
+    source_sheet.copy_to(destination_spreadsheet_id)
 
     new_sheet = spreadsheet.worksheet(f"{source_sheet_title} (копия)")
 
@@ -43,6 +52,7 @@ def create_new_ws_project_archive(spreadsheet: Spreadsheet) -> Worksheet:
 
     new_sheet.batch_clear([f"A2:{last_column_letter}{total_rows}"])
     logging.info(f"Лист {dt.now().year} создан.")
+
     return new_sheet
 
 
@@ -51,99 +61,55 @@ def connect_to_project_archive() -> Worksheet:
     Открывает лист с архивом проектов.
     При смене года создает новый лист.
     """
-    logging.info(f"Подключение к таблице проектов, к листу {dt.now().year}.")
-    try:
-        worksheet = gc.open("Таблица проектов").worksheet(f"{dt.now().year}")
-    except gspread.exceptions.WorksheetNotFound:
-        logging.info(f"Лист {dt.now().year} не найден.")
-        spreadsheet = gc.open("Таблица проектов")
-        worksheet = create_new_ws_project_archive(spreadsheet)
+    archive_spreadsheet: Spreadsheet = sheets_manager.get_spreadsheet(PROJECT_ARCHIVE)
 
-    return worksheet
+    ws = sheets_manager.get_worksheet(archive_spreadsheet, ARCHIVE_CURRENT_WS)
 
+    if not ws:
+        ws = create_new_ws_project_archive(archive_spreadsheet)
 
-def add_settings_ws(spreadsheet: Spreadsheet) -> Worksheet:
-    """Создает лист "Настройки" и форматирует его."""
-    logging.info('Создание листа "Настройки".')
-
-    sheet = spreadsheet.add_worksheet(title="Настройки", rows=100, cols=20)
-    format_settings_ws(sheet)
-
-    logging.info('Лист "Настройки" создан.')
-    return sheet
+    return ws
 
 
-def connect_to_bonus_ws() -> Spreadsheet:
-    """
-    Открывает таблицу "Премирование".
-    При смене года создает новую таблицу.
-    """
-    logging.info(f'Подключение к таблице "Премирование{dt.now().year}".')
-    try:
-        spreadsheet = gc.open(f"Премирование{dt.now().year}")
-    except gspread.exceptions.SpreadsheetNotFound:
-        logging.info(
-            f'Таблица "Премирование{dt.now().year}" не найдена. '
-            f"Создание новой таблицы."
-        )
-        spreadsheet = gc.create(f"Премирование{dt.now().year}")
-        for email in EMAILS.split():
-            try:
-                spreadsheet.share(email, perm_type="user", role="writer", notify=True)
-            except gspread.exceptions.APIError as error:
-                raise NonValidEmailsError(error)
-        add_settings_ws(spreadsheet)
-        sheet1 = spreadsheet.worksheet("Sheet1")
-        spreadsheet.del_worksheet(sheet1)
+def format_bonus_spreadsheet(spreadsheet: Spreadsheet) -> None:
+    for email in EMAILS.split():
+        try:
+            spreadsheet.share(email, perm_type="user", role="writer", notify=True)
+        except gspread.exceptions.APIError as error:
+            logging.exception("Переданы невалидные emails в .env")
+            raise NonValidEmailsError(error)
 
-    return spreadsheet
+    sheets_manager.get_or_create_worksheet(
+        spreadsheet=spreadsheet, title=SETTINGS_WS, rows=100, formatter=format_settings_ws
+    )
+    sheet1 = spreadsheet.worksheet(FIRST_SHEET)
+    spreadsheet.del_worksheet(sheet1)
+
+    sheets_manager.invalidate_spreadsheet(spreadsheet)
 
 
 def connect_to_settings_ws() -> Worksheet:
     """Открывает лист "Настройки" из таблицы "Премирование"."""
-    sheet = connect_to_bonus_ws()
-    logging.info('Подключение к листу "Настройки".')
-    try:
-        settings = sheet.worksheet("Настройки")
-    except gspread.exceptions.WorksheetNotFound:
-        logging.info('Лист "Настройки" не найден.')
-        settings = add_settings_ws(sheet)
-
-    return settings
+    spreadsheet: Spreadsheet = sheets_manager.get_or_create_spreadsheet(
+        BONUS_WS, format_bonus_spreadsheet
+    )
+    ws = sheets_manager.get_or_create_worksheet(
+        spreadsheet=spreadsheet, title=SETTINGS_WS, rows=100, formatter=format_settings_ws
+    )
+    return ws
 
 
-def create_engineer_ws(spreadsheet: Spreadsheet, engineer: str) -> Worksheet:
-    """
-    Создает для проектироващика лист и форматирует его.
-    """
-    logging.info(f'Создание листа {engineer} в таблице "Премирование".')
-
-    sheet = spreadsheet.add_worksheet(title=f"{engineer}", rows=200, cols=20)
-
-    format_new_engineer_ws(sheet)
-
-    logging.info(f"Лист {engineer} создан. " f"Ждем 30 секунд для продолжения работы.")
-    time.sleep(30)
-
-    return sheet
-
-
-def connect_to_engineer_ws(engineer: str) -> Worksheet:
+def connect_to_engineer_ws(engineer: str) -> Worksheet | None:
     """
     Открывает лист проектировщика.
     Если лист не найден, возвращает None.
     """
-    spreadsheet = connect_to_bonus_ws()
+    spreadsheet: Spreadsheet = sheets_manager.get_or_create_spreadsheet(
+        BONUS_WS, format_bonus_spreadsheet
+    )
+    engineer_ws = sheets_manager.get_worksheet(spreadsheet, engineer)
 
-    logging.info(f"Подключение к листу {engineer}.")
-
-    try:
-        sheet = spreadsheet.worksheet(f"{engineer}")
-    except gspread.exceptions.WorksheetNotFound:
-        logging.info(f"Лист {engineer} не найден.")
-        return None
-
-    return sheet
+    return engineer_ws
 
 
 def connect_to_engineer_ws_or_create(engineer: str) -> Worksheet:
@@ -151,39 +117,36 @@ def connect_to_engineer_ws_or_create(engineer: str) -> Worksheet:
     Открывает лист проектировщика.
     Если лист не найден, создает его.
     """
-    spreadsheet = connect_to_bonus_ws()
+    spreadsheet: Spreadsheet = sheets_manager.get_or_create_spreadsheet(
+        BONUS_WS, format_bonus_spreadsheet
+    )
+    engineer_ws = sheets_manager.get_or_create_worksheet(
+        spreadsheet,
+        engineer,
+        formatter=format_new_engineer_ws,
+        sleep_after=AFTER_FORMAT_SLEEP,
+    )
 
-    logging.info(f"Подключение к листу {engineer}.")
-
-    try:
-        sheet = spreadsheet.worksheet(f"{engineer}")
-    except gspread.exceptions.WorksheetNotFound:
-        logging.info(f"Лист {engineer} не найден.")
-        sheet = create_engineer_ws(spreadsheet, engineer)
-
-    return sheet
+    return engineer_ws
 
 
-def send_project_data_to_spreadsheet(df: DataFrame, engineer: str) -> Worksheet:
+def get_attendance_sheet_ws() -> list[Worksheet]:
+    """Подключается к табелю посещаемости офиса и возвращает все листы."""
+    spreadsheet: Spreadsheet = sheets_manager.get_spreadsheet_by_url(
+        ENDPOINT_ATTENDANCE_SHEET
+    )
+    worksheets = sheets_manager.get_all_worksheets(spreadsheet)
+    return worksheets
+
+
+def send_project_data_to_spreadsheet(df: DataFrame, engineer: str) -> None:
     """
     Отправляет данные с баллами в таблицу "Премирование".
     """
     logging.info("Отправка данных о проектах на лист проектировщика.")
     sheet = connect_to_engineer_ws_or_create(engineer)
 
-    eng_small = df[
-        [
-            "Страна",
-            "Наименование объекта",
-            "Шифр (ИСП)",
-            "Разработал",
-            "Баллы",
-            "Дата начала проекта",
-            "Дата окончания проекта",
-            "Дедлайн",
-            "Автоматически определенная сложность",
-        ]
-    ]
+    eng_small = df[ENG_WS_COL_NAMES]
 
     sheet.update([eng_small.columns.values.tolist()] + eng_small.values.tolist())
 
@@ -191,7 +154,7 @@ def send_project_data_to_spreadsheet(df: DataFrame, engineer: str) -> Worksheet:
     color_comp_correction(df, sheet)
 
 
-def send_quarter_data_to_spreadsheet(df: DataFrame, engineer: str) -> Worksheet:
+def send_quarter_data_to_spreadsheet(df: DataFrame, engineer: str) -> None:
     """
     Отсылает данные о баллах, заработанных в каждом квартале
     в таблицу "Премирование".
@@ -202,7 +165,7 @@ def send_quarter_data_to_spreadsheet(df: DataFrame, engineer: str) -> Worksheet:
     sheet.update([df.columns.values.tolist()] + df.values.tolist(), range_name="L1:N200")
 
 
-def send_results_data_ws(df: DataFrame) -> Worksheet:
+def send_results_data_ws(df: DataFrame) -> None:
     """Отправляет данные о средних баллах на лист "Настройки"."""
     worksheet = connect_to_settings_ws()
 
@@ -211,10 +174,8 @@ def send_results_data_ws(df: DataFrame) -> Worksheet:
         [df.columns.values.tolist()] + df.values.tolist(), range_name="C1:E10"
     )
 
-    return worksheet
 
-
-def send_bonus_data_ws(engineer: str, df: DataFrame) -> Worksheet:
+def send_bonus_data_ws(engineer: str, df: DataFrame) -> None:
     """Отправляет данные о выполнении плана на лист проектировщика."""
     worksheet = connect_to_engineer_ws_or_create(engineer)
 
@@ -223,31 +184,8 @@ def send_bonus_data_ws(engineer: str, df: DataFrame) -> Worksheet:
         [df.columns.values.tolist()] + df.values.tolist(), range_name="N1:Q10"
     )
 
-    return worksheet
 
-
-def connect_to_attendance_sheet(month: str) -> Worksheet:
-    """Подключается к табелю посещаемости офиса."""
-    logging.info(f"Подключение к табелю посещаемости лист {month}.")
-    try:
-        spreadsheet: Spreadsheet = gc.open_by_url(ENDPOINT_ATTENDANCE_SHEET)
-    except gspread.exceptions.SpreadsheetNotFound:
-        logging.info("Табель посещаемости не найден.")
-        raise gspread.exceptions.SpreadsheetNotFound(
-            "Табель посещаемости не найден. Проверьте ссылку в .env файле "
-            "и настройки доступа к таблице."
-        )
-
-    try:
-        worksheet = spreadsheet.worksheet(month)
-    except gspread.exceptions.WorksheetNotFound:
-        logging.error(f"Лист {month} не найден.")
-        return None
-
-    return worksheet
-
-
-def send_hours_data_ws(df: DataFrame) -> Worksheet:
+def send_hours_data_ws(df: DataFrame) -> None:
     """Отправляет данные о рабочих часах на лист настроек."""
     worksheet = connect_to_settings_ws()
 
@@ -255,13 +193,3 @@ def send_hours_data_ws(df: DataFrame) -> Worksheet:
     worksheet.update(
         [df.columns.values.tolist()] + df.values.tolist(), range_name="G1:S30"
     )
-
-    return worksheet
-
-
-def delete_bonus_ws() -> None:
-    """Удаляет текущую таблицу "Премирование"."""
-    logging.info(f'Удаление таблицы "Премирование{dt.now().year}".')
-    spreadsheet = gc.open(f"Премирование{dt.now().year}")
-    gc.del_spreadsheet(spreadsheet.id)
-    logging.info(f'Таблица "Премирование{dt.now().year}" удалена.')

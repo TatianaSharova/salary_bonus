@@ -1,6 +1,7 @@
 import asyncio
 import subprocess
 import time
+import traceback
 from datetime import datetime, timedelta
 
 import gspread
@@ -10,14 +11,15 @@ from apscheduler.triggers.cron import CronTrigger
 from pandas.core.frame import DataFrame
 from pytz import timezone
 
-from calculations.complexity import set_project_complexity
-from calculations.counting_points import count_points
-from calculations.quaterly_points import calculate_quarter
-from calculations.results import do_results
-from logger import logging
-from notification.telegram.bot import send_tg_message, tg_bot
-from utils import get_list_of_engineers, is_point
-from worksheets.worksheets import (
+from src.calculations.complexity import set_project_complexity
+from src.calculations.counting_points import count_points
+from src.calculations.quaterly_points import calculate_quarter
+from src.calculations.results import do_results
+from src.logger import logging
+from src.notification.telegram.bot import send_tg_message, tg_bot
+from src.utils import get_list_of_engineers, is_point
+from src.worksheets.google_sheets_manager import sheets_manager
+from src.worksheets.worksheets import (
     connect_to_engineer_ws,
     connect_to_project_archive,
     send_project_data_to_spreadsheet,
@@ -182,12 +184,14 @@ async def main() -> None:
                 process_data(list_of_engineers, df)
                 await send_tg_message(tg_bot, "Расчет баллов успешно выполнен.")
                 logging.info("Программа успешно выполнила работу.")
-        except gspread.exceptions.APIError as error:
-            logging.exception(error)
-            await send_tg_message(tg_bot, f"{error}")
+                sheets_manager.invalidate()
         except Exception as error:
+            error_name = type(error).__name__
             logging.exception(error)
-            await send_tg_message(tg_bot, f"Ошибка: {error}")
+            tb = "".join(traceback.format_tb(error.__traceback__))
+            await send_tg_message(
+                tg_bot, f"Во время рассчета произошла ошибка {error_name}:\n\n{tb}"
+            )
 
     await tg_bot.session.close()
 

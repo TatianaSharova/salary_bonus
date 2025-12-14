@@ -5,8 +5,8 @@ import holidays
 import pandas as pd
 from pandas.core.frame import DataFrame
 
-from logger import logging
-from worksheets.worksheets import connect_to_settings_ws
+from src.logger import logging
+from src.worksheets.worksheets import connect_to_settings_ws
 
 pd.options.mode.chained_assignment = None
 

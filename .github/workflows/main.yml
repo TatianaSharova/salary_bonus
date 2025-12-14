@@ -3,7 +3,7 @@ name: Salary Bonus Workflow
 on:
   push:
     branches:
-      - main
+      # - main
 
 jobs:
   build:

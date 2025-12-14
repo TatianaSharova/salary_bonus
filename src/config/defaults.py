@@ -14,3 +14,28 @@ MONTHS = {
     "11": f"Ноябрь {dt.now().year}",
     "12": f"Декабрь {dt.now().year}",
 }
+
+# ws formating
+ROWS_COUNT = 200
+COLOMNS_COUNT = 20
+ENG_WS_COL_NAMES = [
+    "Страна",
+    "Наименование объекта",
+    "Шифр (ИСП)",
+    "Разработал",
+    "Баллы",
+    "Дата начала проекта",
+    "Дата окончания проекта",
+    "Дедлайн",
+    "Автоматически определенная сложность",
+]
+
+# sleep time in seconds
+AFTER_FORMAT_SLEEP = 10
+
+# worksheet/spreadsheet names
+PROJECT_ARCHIVE = "Таблица проектов"
+SETTINGS_WS = "Настройки"
+BONUS_WS = f"1Премирование{dt.now().year}"
+ARCHIVE_CURRENT_WS = f"{dt.now().year}"
+FIRST_SHEET = "Sheet1"

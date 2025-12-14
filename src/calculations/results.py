@@ -1,15 +1,14 @@
-import time
 from datetime import datetime as dt
 
 import pandas as pd
 from pandas.core.frame import DataFrame
 from pandas.core.series import Series
 
-from config.defaults import MONTHS
-from logger import logging
-from worksheets.worksheets import (
-    connect_to_attendance_sheet,
+from src.config.defaults import MONTHS
+from src.logger import logging
+from src.worksheets.worksheets import (
     connect_to_engineer_ws,
+    get_attendance_sheet_ws,
     send_bonus_data_ws,
     send_hours_data_ws,
     send_results_data_ws,
@@ -94,15 +93,14 @@ def get_working_hours_data(engineers: list[str]) -> DataFrame:
     columns = ["Имя"] + months_list
     df = pd.DataFrame(columns=columns)
 
+    attendance_ws_all = get_attendance_sheet_ws()
+
     for num in range(1, current_month + 1):
-        worksheet = connect_to_attendance_sheet(
-            MONTHS[str(num)]
-        )  # TODO сразу подключаться к таблице и брать все листы
-        if worksheet:
-            raw_data = worksheet.get("A1:T160")
-            data = pd.DataFrame(raw_data[1:], columns=raw_data[0])
-            monthly_data[MONTHS[str(num)]] = data
-        time.sleep(5)
+        for worksheet in attendance_ws_all:
+            if worksheet.title == MONTHS[str(num)]:
+                raw_data = worksheet.get("A1:T160")
+                data = pd.DataFrame(raw_data[1:], columns=raw_data[0])
+                monthly_data[MONTHS[str(num)]] = data
 
     for engineer in engineers:
         engineer_work = {"Имя": f"{engineer}"}
