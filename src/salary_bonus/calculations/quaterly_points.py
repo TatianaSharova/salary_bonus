@@ -5,7 +5,7 @@ from pandas.core.frame import DataFrame
 from pandas.core.indexes.period import PeriodIndex
 from pandas.core.series import Series
 
-from src.logger import logging
+from src.salary_bonus.logger import logging
 
 pd.options.mode.chained_assignment = None
 

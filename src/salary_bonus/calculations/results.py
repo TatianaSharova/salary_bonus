@@ -4,9 +4,9 @@ import pandas as pd
 from pandas.core.frame import DataFrame
 from pandas.core.series import Series
 
-from src.config.defaults import MONTHS
-from src.logger import logging
-from src.worksheets.worksheets import (
+from src.salary_bonus.config.defaults import MONTHS
+from src.salary_bonus.logger import logging
+from src.salary_bonus.worksheets.worksheets import (
     connect_to_engineer_ws,
     get_attendance_sheet_ws,
     send_bonus_data_ws,

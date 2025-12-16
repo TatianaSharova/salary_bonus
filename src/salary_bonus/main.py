@@ -1,5 +1,7 @@
 import asyncio
+import os
 import subprocess
+import sys
 import time
 import traceback
 from datetime import datetime, timedelta
@@ -11,15 +13,19 @@ from apscheduler.triggers.cron import CronTrigger
 from pandas.core.frame import DataFrame
 from pytz import timezone
 
-from src.calculations.complexity import set_project_complexity
-from src.calculations.counting_points import count_points
-from src.calculations.quaterly_points import calculate_quarter
-from src.calculations.results import do_results
-from src.logger import logging
-from src.notification.telegram.bot import send_tg_message, tg_bot
-from src.utils import get_list_of_engineers, is_point
-from src.worksheets.google_sheets_manager import sheets_manager
-from src.worksheets.worksheets import (
+sys.path.insert(
+    0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+)
+
+from src.salary_bonus.calculations.complexity import set_project_complexity
+from src.salary_bonus.calculations.counting_points import count_points
+from src.salary_bonus.calculations.quaterly_points import calculate_quarter
+from src.salary_bonus.calculations.results import do_results
+from src.salary_bonus.logger import logging
+from src.salary_bonus.notification.telegram.bot import send_tg_message, tg_bot
+from src.salary_bonus.utils import get_list_of_engineers, is_point
+from src.salary_bonus.worksheets.google_sheets_manager import sheets_manager
+from src.salary_bonus.worksheets.worksheets import (
     connect_to_engineer_ws,
     connect_to_project_archive,
     send_project_data_to_spreadsheet,

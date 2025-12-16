@@ -5,7 +5,7 @@ from gspread.spreadsheet import Spreadsheet
 from gspread.worksheet import Worksheet
 from pandas.core.frame import DataFrame
 
-from src.config.defaults import (
+from src.salary_bonus.config.defaults import (
     AFTER_FORMAT_SLEEP,
     ARCHIVE_CURRENT_WS,
     BONUS_WS,
@@ -14,11 +14,15 @@ from src.config.defaults import (
     PROJECT_ARCHIVE,
     SETTINGS_WS,
 )
-from src.config.environment import CREDS_PATH, EMAILS, ENDPOINT_ATTENDANCE_SHEET
-from src.exceptions import NonValidEmailsError
-from src.logger import logging
-from src.worksheets.google_sheets_manager import sheets_manager
-from src.worksheets.utils import (
+from src.salary_bonus.config.environment import (
+    CREDS_PATH,
+    EMAILS,
+    ENDPOINT_ATTENDANCE_SHEET,
+)
+from src.salary_bonus.exceptions import NonValidEmailsError
+from src.salary_bonus.logger import logging
+from src.salary_bonus.worksheets.google_sheets_manager import sheets_manager
+from src.salary_bonus.worksheets.utils import (
     color_comp_correction,
     color_overdue_deadline,
     format_new_engineer_ws,

@@ -4,7 +4,7 @@ from gspread.worksheet import Worksheet
 from gspread_formatting import set_column_widths, set_frozen
 from pandas import DataFrame
 
-from src.logger import logging
+from src.salary_bonus.logger import logging
 
 
 def get_column_letter(n: int) -> str:

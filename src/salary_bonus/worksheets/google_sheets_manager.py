@@ -5,9 +5,9 @@ import gspread
 from gspread.spreadsheet import Spreadsheet
 from gspread.worksheet import Worksheet
 
-from src.config.defaults import COLOMNS_COUNT, ROWS_COUNT
-from src.config.environment import CREDS_PATH
-from src.logger import logging
+from src.salary_bonus.config.defaults import COLOMNS_COUNT, ROWS_COUNT
+from src.salary_bonus.config.environment import CREDS_PATH
+from src.salary_bonus.logger import logging
 
 gc = gspread.service_account(filename=CREDS_PATH)
 

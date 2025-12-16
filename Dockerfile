@@ -8,4 +8,4 @@ RUN pip install -r requirements.txt --no-cache-dir
 
 COPY . .
 
-CMD ["python3", "-m", "src.main"]
+CMD ["python3", "src/salary_bonus/main.py"]
