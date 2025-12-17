@@ -2,7 +2,8 @@ import asyncio
 import os
 import subprocess
 import sys
-import time
+
+# import time
 import traceback
 from datetime import datetime, timedelta
 
@@ -19,7 +20,7 @@ sys.path.insert(
 
 from src.salary_bonus.calculations.complexity import set_project_complexity
 from src.salary_bonus.calculations.counting_points import count_points
-from src.salary_bonus.calculations.quaterly_points import calculate_quarter
+from src.salary_bonus.calculations.mounth_points import calculate_by_month
 from src.salary_bonus.calculations.results import do_results
 from src.salary_bonus.logger import logging
 from src.salary_bonus.notification.telegram.bot import send_tg_message, tg_bot
@@ -86,7 +87,7 @@ def find_sum_equipment(df: DataFrame) -> DataFrame:
         equipment_df_filt["Шифр (ИСП)"] != ""
     ]  # noqa: E501
 
-    quaters = calculate_quarter(equipment_df_filt, colomn=name)
+    quaters = calculate_by_month(equipment_df_filt, column=name)
     quaters[name] = quaters[name].apply(lambda x: "{:,.2f}".format(x).replace(",", " "))
     return quaters
 
@@ -101,6 +102,7 @@ def process_data(engineers: list[str], df: DataFrame) -> None:
     а также происходит сбор информации о рабочих часах с листа посещаемости.
     """
     results = {}
+    engineers = ["Фокина"]
 
     for engineer in engineers:
         logging.info(f"Начинается расчет баллов для проектировщика {engineer}.")
@@ -140,7 +142,7 @@ def process_data(engineers: list[str], df: DataFrame) -> None:
         ]
 
         if not engineer_projects_filtered.empty:
-            quarters = calculate_quarter(engineer_projects_filtered, colomn="Баллы")
+            quarters = calculate_by_month(engineer_projects_filtered, column="Баллы")
             send_quarter_data_to_spreadsheet(quarters, engineer)
             results[engineer] = quarters
             logging.info(
@@ -152,7 +154,7 @@ def process_data(engineers: list[str], df: DataFrame) -> None:
                 f"Нет готовых проектов у проектировщика {engineer}. "
                 f"Переходим к следующему проектировщику через 10 секунд."
             )
-        time.sleep(10)
+        # time.sleep(10)
 
     sum_equipment = find_sum_equipment(df)
 

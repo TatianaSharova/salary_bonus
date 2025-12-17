@@ -175,7 +175,7 @@ def send_results_data_ws(df: DataFrame) -> None:
 
     logging.info('Отправка данных о средних баллах на лист "Настройки".')
     worksheet.update(
-        [df.columns.values.tolist()] + df.values.tolist(), range_name="C1:E10"
+        [df.columns.values.tolist()] + df.values.tolist(), range_name="C1:E20"
     )
 
 
@@ -185,7 +185,7 @@ def send_bonus_data_ws(engineer: str, df: DataFrame) -> None:
 
     logging.info(f"Отправка данных о выполнении плана проектировщика {engineer}.")
     worksheet.update(
-        [df.columns.values.tolist()] + df.values.tolist(), range_name="N1:Q10"
+        [df.columns.values.tolist()] + df.values.tolist(), range_name="N1:Q20"
     )
 
 

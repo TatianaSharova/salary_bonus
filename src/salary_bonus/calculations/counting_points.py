@@ -282,12 +282,17 @@ def count_points(row: Series, df: DataFrame, blocks: list) -> Union[int, str]:
     points += check_sot_skud(row)
     points += check_cultural_heritage(row)
     points += check_net(row)
-    points = round(points / check_authors(row["Разработал"]), 1)
+    points = points / check_authors(row["Разработал"])
 
     if "блок-контейнер" in row["Тип объекта"].strip().lower():
         return count_block(row, blocks, points, df)
 
-    return check_spend_time(row, points, df, amount=0)
+    points = check_spend_time(row, points, df, amount=0)
+
+    if isinstance(points, str):
+        return points
+
+    return round(points, 1)
 
 
 def count_adjusting_points(row: Series, df: DataFrame) -> float:
@@ -304,10 +309,10 @@ def count_adjusting_points(row: Series, df: DataFrame) -> float:
     points += check_sot_skud(row)
     points += check_cultural_heritage(row)
     points += check_net(row)
-    points = round(points / check_authors(row["Разработал"]), 1)
+    points = points / check_authors(row["Разработал"])
     points = check_spend_time(row, points, df, amount=0)
 
     if isinstance(points, str):
         return points
 
-    return points * 0.3
+    return round(points * 0.3, 1)

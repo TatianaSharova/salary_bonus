@@ -24,14 +24,14 @@ def count_average_points(res: dict) -> DataFrame:
     )
     merged_df = pd.concat(res.values(), ignore_index=True)
 
-    filtered_df = merged_df[merged_df["Квартал"].str.contains(f"{dt.now().year}")]
+    filtered_df = merged_df[merged_df["Месяц"].str.contains(f"{dt.now().year}")]
 
-    average_df = filtered_df.groupby("Квартал").mean().reset_index()
+    average_df = filtered_df.groupby("Месяц").mean().reset_index()
     average_df["Баллы"] = average_df["Баллы"].apply(lambda x: int(x))
 
     average_df = average_df.rename(columns={"Баллы": "Средние баллы/План"})
 
-    return average_df[["Квартал", "Средние баллы/План"]]
+    return average_df[["Месяц", "Средние баллы/План"]]
 
 
 def calculate_bonus(row: Series) -> int:
@@ -56,32 +56,59 @@ def count_percent(row: Series) -> str:
 
 
 def count_quaterly_hours(df: DataFrame) -> DataFrame:
-    """Суммирует часы по кварталам."""
-    quarters = {
-        f"1-{dt.now().year}": [MONTHS["1"], MONTHS["2"], MONTHS["3"]],
-        f"2-{dt.now().year}": [MONTHS["4"], MONTHS["5"], MONTHS["6"]],
-        f"3-{dt.now().year}": [MONTHS["7"], MONTHS["8"], MONTHS["9"]],
-        f"4-{dt.now().year}": [MONTHS["10"], MONTHS["11"], MONTHS["12"]],
-    }
+    """
+    Формирует DataFrame с суммой рабочих часов по месяцам текущего года.
 
-    quarterly_hours = pd.DataFrame()
+    Ожидается, что df содержит колонки с часами по месяцам,
+    ключи MONTHS — строки "1".."12", значения — имена колонок в df.
 
-    for quarter, months in quarters.items():
-        quarterly_hours[quarter] = df[months].sum(axis=1, skipna=True)
+    Возвращает DataFrame с колонками:
+        - "Имя" — имя сотрудника
+        - "1-YYYY", "2-YYYY", ..., "12-YYYY" — часы по каждому месяцу
+    """
+    current_year = dt.now().year
+    monthly_hours = pd.DataFrame()
 
-    quarterly_hours["Имя"] = df["Имя"]
+    # Копируем колонку с именами сотрудников
+    monthly_hours["Имя"] = df["Имя"]
 
-    quarterly_hours = quarterly_hours[
-        [
-            "Имя",
-            f"1-{dt.now().year}",
-            f"2-{dt.now().year}",
-            f"3-{dt.now().year}",
-            f"4-{dt.now().year}",
-        ]
-    ]
+    # Создаём колонки для каждого месяца
+    for i in range(1, 13):
+        month_col_name = f"{i}-{current_year}"
+        source_col_name = MONTHS[str(i)]
+        if source_col_name in df.columns:
+            monthly_hours[month_col_name] = df[source_col_name].fillna(0)
+        else:
+            # Если исходная колонка отсутствует — ставим 0
+            monthly_hours[month_col_name] = 0
 
-    return quarterly_hours
+    return monthly_hours
+    # """Суммирует часы по кварталам."""
+    # quarters = {
+    #     f"1-{dt.now().year}": [MONTHS["1"], MONTHS["2"], MONTHS["3"]],
+    #     f"2-{dt.now().year}": [MONTHS["4"], MONTHS["5"], MONTHS["6"]],
+    #     f"3-{dt.now().year}": [MONTHS["7"], MONTHS["8"], MONTHS["9"]],
+    #     f"4-{dt.now().year}": [MONTHS["10"], MONTHS["11"], MONTHS["12"]],
+    # }
+
+    # quarterly_hours = pd.DataFrame()
+
+    # for quarter, months in quarters.items():
+    #     quarterly_hours[quarter] = df[months].sum(axis=1, skipna=True)
+
+    # quarterly_hours["Имя"] = df["Имя"]
+
+    # quarterly_hours = quarterly_hours[
+    #     [
+    #         "Имя",
+    #         f"1-{dt.now().year}",
+    #         f"2-{dt.now().year}",
+    #         f"3-{dt.now().year}",
+    #         f"4-{dt.now().year}",
+    #     ]
+    # ]
+
+    # return quarterly_hours
 
 
 def get_working_hours_data(engineers: list[str]) -> DataFrame:
@@ -207,10 +234,8 @@ def count_target(engineer: str, average_df: DataFrame, df_hours: DataFrame) -> D
     if (filtered_df.iloc[0, 1:] == 0).all():
         return search_for_hours(engineer, average_df)
 
-    transposed_df = filtered_df.melt(
-        id_vars=["Имя"], var_name="Квартал", value_name="Часы"
-    )
-    transposed_df = transposed_df[["Квартал", "Часы"]]
+    transposed_df = filtered_df.melt(id_vars=["Имя"], var_name="Месяц", value_name="Часы")
+    transposed_df = transposed_df[["Месяц", "Часы"]]
     new_df = transposed_df.rename(columns={"Часы": f"{engineer}"})
 
     average_df["Нерабочие часы"] = average_df["Рабочие часы"] - new_df[f"{engineer}"]
@@ -235,7 +260,7 @@ def do_results(results: dict, sum_equipment: DataFrame) -> None:
     """
     logging.info("Начинаем подсчет квартального плана и премиальных баллов.")
     average_df = count_average_points(results)
-    res_df = pd.merge(average_df, sum_equipment, on="Квартал", how="outer")
+    res_df = pd.merge(average_df, sum_equipment, on="Месяц", how="outer")
     res_df["Средние баллы/План"] = res_df["Средние баллы/План"].replace(
         {pd.NA: None, float("nan"): None}
     )
@@ -250,18 +275,26 @@ def do_results(results: dict, sum_equipment: DataFrame) -> None:
 
     full_time_work_hours = pd.DataFrame(
         {
-            "Квартал": [
+            "Месяц": [
                 f"1-{dt.now().year}",
                 f"2-{dt.now().year}",
                 f"3-{dt.now().year}",
                 f"4-{dt.now().year}",
+                f"5-{dt.now().year}",
+                f"6-{dt.now().year}",
+                f"7-{dt.now().year}",
+                f"8-{dt.now().year}",
+                f"9-{dt.now().year}",
+                f"10-{dt.now().year}",
+                f"11-{dt.now().year}",
+                f"12-{dt.now().year}",
             ],
             "Рабочие часы": working_hours_per_quarter.iloc[-1, 1:].tolist(),
         }
     )
 
     target_with_hours_df = pd.merge(
-        average_df, full_time_work_hours, on="Квартал", how="outer"
+        average_df, full_time_work_hours, on="Месяц", how="outer"
     )
 
     for engineer_name, value in results.items():
@@ -269,7 +302,7 @@ def do_results(results: dict, sum_equipment: DataFrame) -> None:
             engineer_name, target_with_hours_df, working_hours_per_quarter
         )
         logging.info("Подсчет премиальных баллов.")
-        result_df = pd.merge(target_df, value, on="Квартал", how="outer")
+        result_df = pd.merge(target_df, value, on="Месяц", how="outer")
         result_df["Премиальные баллы"] = result_df.apply(calculate_bonus, axis=1)
 
         result_df["Премиальные баллы"] = result_df["Премиальные баллы"].replace(
