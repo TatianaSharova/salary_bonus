@@ -185,7 +185,7 @@ def send_bonus_data_ws(engineer: str, df: DataFrame) -> None:
 
     logging.info(f"Отправка данных о выполнении плана проектировщика {engineer}.")
     worksheet.update(
-        [df.columns.values.tolist()] + df.values.tolist(), range_name="N1:Q20"
+        [df.columns.values.tolist()] + df.values.tolist(), range_name="N1:Q30"
     )
 
 

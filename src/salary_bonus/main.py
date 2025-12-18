@@ -188,20 +188,23 @@ async def main() -> None:
                 f"Список проектировщиков, для которых нужен расчет: "
                 f"{list_of_engineers}"
             )
-            if list_of_engineers != []:
+            if len(list_of_engineers) > 0:
                 process_data(list_of_engineers, df)
                 await send_tg_message(tg_bot, "Расчет баллов успешно выполнен.")
                 logging.info("Программа успешно выполнила работу.")
-                sheets_manager.invalidate()
         except Exception as error:
-            error_name = type(error).__name__
             logging.exception(error)
+            error_name = type(error).__name__
             tb = "".join(traceback.format_tb(error.__traceback__))
-            await send_tg_message(
-                tg_bot, f"Во время рассчета произошла ошибка {error_name}:\n\n{tb}"
-            )
 
-    await tg_bot.session.close()
+            await send_tg_message(
+                tg_bot,
+                f"Во время расчета произошла ошибка {error_name}: {error}\n\n"
+                f"{tb}"
+            )
+        finally:
+            sheets_manager.invalidate()
+            await tg_bot.session.close()
 
 
 async def update_holidays_package():

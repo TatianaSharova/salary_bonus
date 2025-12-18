@@ -105,7 +105,7 @@ def format_new_engineer_ws(sheet: Worksheet) -> None:
         },
     )
     sheet.format(
-        "L1:Q1",
+        "L1:M1",
         {
             "backgroundColor": {"red": 0.8, "green": 0.9, "blue": 1},
             "textFormat": {"bold": True},
