@@ -12,6 +12,7 @@ from src.salary_bonus.config.defaults import (
     ENG_WS_COL_NAMES,
     FIRST_SHEET,
     PROJECT_ARCHIVE,
+    RESULT_WS,
     SETTINGS_WS,
 )
 from src.salary_bonus.config.environment import (
@@ -26,6 +27,7 @@ from src.salary_bonus.worksheets.utils import (
     color_comp_correction,
     color_overdue_deadline,
     format_new_engineer_ws,
+    format_new_result_ws,
     format_settings_ws,
     get_column_letter,
 )
@@ -171,11 +173,21 @@ def send_quarter_data_to_spreadsheet(df: DataFrame, engineer: str) -> None:
 
 def send_results_data_ws(df: DataFrame) -> None:
     """Отправляет данные о средних баллах на лист "Настройки"."""
-    worksheet = connect_to_settings_ws()
+    spreadsheet: Spreadsheet = sheets_manager.get_or_create_spreadsheet(
+        BONUS_WS, format_bonus_spreadsheet
+    )
+
+    result_ws = sheets_manager.get_or_create_worksheet(
+        spreadsheet,
+        RESULT_WS,
+        cols=40,
+        formatter=format_new_result_ws,
+        sleep_after=AFTER_FORMAT_SLEEP,
+    )
 
     logging.info('Отправка данных о средних баллах на лист "Настройки".')
-    worksheet.update(
-        [df.columns.values.tolist()] + df.values.tolist(), range_name="C1:E20"
+    result_ws.update(
+        [df.columns.values.tolist()] + df.values.tolist(), range_name="P1:R15"
     )
 
 
@@ -191,9 +203,19 @@ def send_bonus_data_ws(engineer: str, df: DataFrame) -> None:
 
 def send_hours_data_ws(df: DataFrame) -> None:
     """Отправляет данные о рабочих часах на лист настроек."""
-    worksheet = connect_to_settings_ws()
+    spreadsheet: Spreadsheet = sheets_manager.get_or_create_spreadsheet(
+        BONUS_WS, format_bonus_spreadsheet
+    )
 
-    logging.info('Отправка данных о рабочих часах на лист "Настройки".')
-    worksheet.update(
-        [df.columns.values.tolist()] + df.values.tolist(), range_name="G1:S30"
+    result_ws = sheets_manager.get_or_create_worksheet(
+        spreadsheet,
+        RESULT_WS,
+        cols=40,
+        formatter=format_new_result_ws,
+        sleep_after=AFTER_FORMAT_SLEEP,
+    )
+
+    logging.info('Отправка данных о рабочих часах на лист "Итоги".')
+    result_ws.update(
+        [df.columns.values.tolist()] + df.values.tolist(), range_name="T1:AF30"
     )

@@ -31,11 +31,13 @@ ENG_WS_COL_NAMES = [
 ]
 
 # sleep time in seconds
-AFTER_FORMAT_SLEEP = 10
+AFTER_FORMAT_SLEEP = 5
 
 # worksheet/spreadsheet names
 PROJECT_ARCHIVE = "Таблица проектов"
-SETTINGS_WS = "Настройки"
+ADDITIONAL_WORK = "Таблица доп. работ"
+SETTINGS_WS = "настройки1"
 BONUS_WS = f"1Премирование{dt.now().year}"
 ARCHIVE_CURRENT_WS = f"{dt.now().year}"
 FIRST_SHEET = "Sheet1"
+RESULT_WS = "Итоги"

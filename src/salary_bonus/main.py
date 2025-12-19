@@ -2,12 +2,9 @@ import asyncio
 import os
 import subprocess
 import sys
-
-# import time
 import traceback
 from datetime import datetime, timedelta
 
-import gspread
 import pandas as pd
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.triggers.cron import CronTrigger
@@ -24,11 +21,10 @@ from src.salary_bonus.calculations.mounth_points import calculate_by_month
 from src.salary_bonus.calculations.results import do_results
 from src.salary_bonus.logger import logging
 from src.salary_bonus.notification.telegram.bot import send_tg_message, tg_bot
-from src.salary_bonus.utils import get_list_of_engineers, is_point
+from src.salary_bonus.utils import get_employees, get_project_archive_data, is_point
 from src.salary_bonus.worksheets.google_sheets_manager import sheets_manager
 from src.salary_bonus.worksheets.worksheets import (
     connect_to_engineer_ws,
-    connect_to_project_archive,
     send_project_data_to_spreadsheet,
     send_quarter_data_to_spreadsheet,
 )
@@ -92,7 +88,7 @@ def find_sum_equipment(df: DataFrame) -> DataFrame:
     return quaters
 
 
-def process_data(engineers: list[str], df: DataFrame) -> None:
+def process_project_archive_data(engineers: list[str], df: DataFrame) -> None:
     """
     Собирает данные из архива проектов, производит расчет баллов
     и отправляет полученные данные в таблицу "Премирование"
@@ -167,44 +163,38 @@ async def main() -> None:
     """
     logging.info("Запущена основная задача.")
 
-    try:
-        worksheet = connect_to_project_archive()
-    except gspread.exceptions.SpreadsheetNotFound as err:
-        logging.exception(err)
-        await send_tg_message(
-            tg_bot,
-            'Ошибка: таблица "Таблица проектов" не найдена.\n'
-            "Возможно название было сменено.",
-        )
+    df = await get_project_archive_data()
+
+    if df.empty:
+        sheets_manager.invalidate()
         await tg_bot.session.close()
         return
 
-    df = pd.DataFrame(worksheet.get_all_records(numericise_ignore=["all"]))
+    try:
+        employees_data = get_employees()
+        list_of_engineers = employees_data["engineers"]
 
-    if not df.empty:
-        try:
-            list_of_engineers = get_list_of_engineers(df, colomn="Разработал")
-            logging.info(
-                f"Список проектировщиков, для которых нужен расчет: "
-                f"{list_of_engineers}"
+        if len(list_of_engineers) > 0:
+            process_project_archive_data(list_of_engineers, df)
+            await send_tg_message(tg_bot, "Расчет баллов успешно выполнен.")
+            logging.info("Программа успешно выполнила работу.")
+        else:
+            msg = "Нет данных о проектировщиках для расчета. Расчет не будет произведен."
+            logging.warning(
+                msg + f"\n\nПолученные данные с листа 'Настройки':\n {employees_data}"
             )
-            if len(list_of_engineers) > 0:
-                process_data(list_of_engineers, df)
-                await send_tg_message(tg_bot, "Расчет баллов успешно выполнен.")
-                logging.info("Программа успешно выполнила работу.")
-        except Exception as error:
-            logging.exception(error)
-            error_name = type(error).__name__
-            tb = "".join(traceback.format_tb(error.__traceback__))
+            await send_tg_message(tg_bot, msg)
+    except Exception as error:
+        logging.exception(error)
+        error_name = type(error).__name__
+        tb = "".join(traceback.format_tb(error.__traceback__))
 
-            await send_tg_message(
-                tg_bot,
-                f"Во время расчета произошла ошибка {error_name}: {error}\n\n"
-                f"{tb}"
-            )
-        finally:
-            sheets_manager.invalidate()
-            await tg_bot.session.close()
+        await send_tg_message(
+            tg_bot, f"Во время расчета произошла ошибка {error_name}: {error}\n\n" f"{tb}"
+        )
+    finally:
+        sheets_manager.invalidate()
+        await tg_bot.session.close()
 
 
 async def update_holidays_package():

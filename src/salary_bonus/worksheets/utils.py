@@ -116,7 +116,9 @@ def format_new_engineer_ws(sheet: Worksheet) -> None:
 
 def format_settings_ws(sheet: Worksheet) -> None:
     """Форматирует новый лист настроек."""
-    sheet.update([["Не учитывать"]], "A1")
+    sheet.update([["Инженер"]], "A1")
+    sheet.update([["Руководитель группы"]], "B1")
+    sheet.update([["ГИП"]], "C1")
     sheet.format(
         "A1:T40",
         {
@@ -126,10 +128,33 @@ def format_settings_ws(sheet: Worksheet) -> None:
         },
     )
     sheet.format(
-        ["A1", "C1:E1", "G1:S1"],
+        ["A1:C1"],
         {
             "backgroundColor": {"red": 1, "green": 0.8, "blue": 0.8},
             "textFormat": {"fontSize": 12},
         },
     )
-    set_column_widths(sheet, [("A", 300), ("E", 120)])
+    set_column_widths(sheet, [("A", 300), ("B", 300), ("C", 300)])
+
+
+def format_new_result_ws(sheet: Worksheet) -> None:
+    """Форматирует новый лист Итоги."""
+
+    sheet.format(
+        "A1:AG40",
+        {
+            "wrapStrategy": "WRAP",
+            "horizontalAlignment": "CENTER",
+            "verticalAlignment": "MIDDLE",
+        },
+    )
+
+    sheet.format(
+        ["P1:R1", "T1:AF1"],
+        {
+            "backgroundColor": {"red": 1, "green": 0.8, "blue": 0.8},
+            "textFormat": {"fontSize": 12},
+        },
+    )
+
+    set_column_widths(sheet, [("R", 300)])
