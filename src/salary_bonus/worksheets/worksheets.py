@@ -160,15 +160,15 @@ def send_project_data_to_spreadsheet(df: DataFrame, engineer: str) -> None:
     color_comp_correction(df, sheet)
 
 
-def send_quarter_data_to_spreadsheet(df: DataFrame, engineer: str) -> None:
+def send_month_data_to_spreadsheet(df: DataFrame, engineer: str) -> None:
     """
     Отсылает данные о баллах, заработанных в каждом квартале
     в таблицу "Премирование".
     """
-    logging.info("Отправка данных о баллах по кварталам на лист проектировщика.")
+    logging.info("Отправка данных о баллах по месяцам на лист проектировщика.")
     sheet = connect_to_engineer_ws_or_create(engineer)
 
-    sheet.update([df.columns.values.tolist()] + df.values.tolist(), range_name="L1:N200")
+    sheet.update([df.columns.values.tolist()] + df.values.tolist(), range_name="L1:M13")
 
 
 def send_results_data_ws(df: DataFrame) -> None:
@@ -219,3 +219,51 @@ def send_hours_data_ws(df: DataFrame) -> None:
     result_ws.update(
         [df.columns.values.tolist()] + df.values.tolist(), range_name="T1:AF30"
     )
+
+
+def send_lead_res_to_ws(leads_data: dict[str, DataFrame]) -> None:
+    """Отправляет итоги руководителей группы га лист итогов."""
+    spreadsheet: Spreadsheet = sheets_manager.get_or_create_spreadsheet(
+        BONUS_WS, format_bonus_spreadsheet
+    )
+
+    ws: Worksheet = sheets_manager.get_or_create_worksheet(
+        spreadsheet, RESULT_WS, cols=40, formatter=format_new_result_ws
+    )
+
+    logging.info('Отправка данных по руководителям на лист "Итоги".')
+
+    rows = []
+    merge_rows: list[int] = []
+
+    current_row = 1  # считаем строки, начиная с 1 (Google Sheets)
+
+    for lead_name, df in leads_data.items():
+        # строка с именем руководителя
+        rows.append([lead_name] + [""] * 12)
+        merge_rows.append(current_row)
+        current_row += 1
+
+        # заголовки DataFrame
+        rows.append(["Имя"] + df.columns.tolist())
+        current_row += 1
+
+        # данные
+        for idx, row in df.iterrows():
+            rows.append([idx] + row.tolist())
+            current_row += 1
+
+        # пустая строка
+        rows.append([""] * 13)
+        current_row += 1
+
+    # очистка диапазона
+    ws.batch_clear(["A1:N200"])
+    ws.unmerge_cells("A1:N200")
+
+    # отправка данных
+    ws.update(rows, range_name="A1:N200")
+
+    # объединение ячеек под имена руководителей
+    for row_num in merge_rows:
+        ws.merge_cells(f"A{row_num}:N{row_num}")

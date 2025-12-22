@@ -32,6 +32,7 @@ ENG_WS_COL_NAMES = [
 
 # sleep time in seconds
 AFTER_FORMAT_SLEEP = 5
+AFTER_ENG_SLEEP = 10
 
 # worksheet/spreadsheet names
 PROJECT_ARCHIVE = "Таблица проектов"

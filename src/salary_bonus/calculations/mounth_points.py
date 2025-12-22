@@ -51,12 +51,6 @@ def calculate_by_month(df: DataFrame, column: str) -> DataFrame:
             Столбец, имя которого передаётся аргументом `column`
             и содержит значения для агрегации
 
-    Структура результирующего DataFrame:
-        - "Месяц": str
-            Месяц в формате "MM-YYYY"
-        - column (str): float
-            Суммарное значение за месяц
-
     Логика:
         - Каждый проект учитывается ровно один раз
         - Значение из столбца `column` полностью относится
@@ -67,6 +61,11 @@ def calculate_by_month(df: DataFrame, column: str) -> DataFrame:
     :param df: Исходный DataFrame с данными по проектам
     :param column: Название столбца DataFrame, который необходимо агрегировать
     :return: DataFrame с агрегированными значениями по месяцам
+    Структура итогового DataFrame:
+        - "Месяц": str
+            Месяц в формате "MM-YYYY"
+        - column (str): float
+            Суммарное значение за месяц
     """
     logging.info(
         "Агрегация значений столбца '%s' по месяцам окончания проектов.",
