@@ -14,6 +14,9 @@ sys.path.insert(
     0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 )
 
+from src.salary_bonus.calculations.additional_archive.process import (
+    process_additional_work_data,
+)
 from src.salary_bonus.calculations.lead_results import process_lead_data
 from src.salary_bonus.calculations.project_archive.process import (
     process_project_archive_data,
@@ -34,7 +37,7 @@ async def main() -> None:
     logging.info("Запущена основная задача.")
     tg_bot = TelegramNotifier()
 
-    df = await get_project_archive_data()
+    df = get_project_archive_data()
 
     if df is None:
         await tg_bot.send_message(
@@ -73,7 +76,7 @@ async def main() -> None:
             return
 
         # Рассчет баллов по дополнительным проектам для проектировщиков
-        # points = process_additional_work_data(archive_points, list_of_engineers)
+        process_additional_work_data(archive_points, list_of_engineers, tg_bot)
         # TODO
 
         # Рассчет баллов для руководителей

@@ -8,6 +8,7 @@ from pandas.core.frame import DataFrame
 
 from src.salary_bonus.logger import logging
 from src.salary_bonus.worksheets.worksheets import (
+    connect_to_add_work_archive,
     connect_to_project_archive,
     connect_to_settings_ws,
 )
@@ -15,13 +16,29 @@ from src.salary_bonus.worksheets.worksheets import (
 pd.options.mode.chained_assignment = None
 
 
-async def get_project_archive_data() -> DataFrame | None:
+def get_project_archive_data() -> DataFrame | None:
     """
     Получает данные из архива проектов.
     Возвращает датафрейм с данными или None, если данных нет.
     """
     try:
         worksheet = connect_to_project_archive()
+    except gspread.exceptions.SpreadsheetNotFound as err:
+        logging.exception(err)
+        return
+
+    df = pd.DataFrame(worksheet.get_all_records(numericise_ignore=["all"]))
+
+    return df
+
+
+def get_add_work_data() -> DataFrame | None:
+    """
+    Получает данные из архива доп. работ.
+    Возвращает датафрейм с данными или None, если данных нет.
+    """
+    try:
+        worksheet = connect_to_add_work_archive()
     except gspread.exceptions.SpreadsheetNotFound as err:
         logging.exception(err)
         return

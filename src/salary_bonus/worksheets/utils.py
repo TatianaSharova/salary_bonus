@@ -1,10 +1,16 @@
 from datetime import datetime as dt
 
+import gspread
+from gspread.spreadsheet import Spreadsheet
 from gspread.worksheet import Worksheet
 from gspread_formatting import set_column_widths, set_frozen
 from pandas import DataFrame
 
+from src.salary_bonus.config.defaults import FIRST_SHEET, SETTINGS_WS
+from src.salary_bonus.config.environment import EMAILS
+from src.salary_bonus.exceptions import NonValidEmailsError
 from src.salary_bonus.logger import logging
+from src.salary_bonus.worksheets.google_sheets_manager import sheets_manager
 
 
 def get_column_letter(n: int) -> str:
@@ -158,3 +164,20 @@ def format_new_result_ws(sheet: Worksheet) -> None:
     )
 
     set_column_widths(sheet, [("R", 300)])
+
+
+def format_bonus_spreadsheet(spreadsheet: Spreadsheet) -> None:
+    for email in EMAILS.split():
+        try:
+            spreadsheet.share(email, perm_type="user", role="writer", notify=True)
+        except gspread.exceptions.APIError as error:
+            logging.exception("Переданы невалидные emails в .env")
+            raise NonValidEmailsError(error)
+
+    sheets_manager.get_or_create_worksheet(
+        spreadsheet=spreadsheet, title=SETTINGS_WS, rows=100, formatter=format_settings_ws
+    )
+    sheet1 = spreadsheet.worksheet(FIRST_SHEET)
+    spreadsheet.del_worksheet(sheet1)
+
+    sheets_manager.invalidate_spreadsheet(spreadsheet)

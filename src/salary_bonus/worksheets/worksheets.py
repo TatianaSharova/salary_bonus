@@ -6,26 +6,22 @@ from gspread.worksheet import Worksheet
 from pandas.core.frame import DataFrame
 
 from src.salary_bonus.config.defaults import (
+    ADDITIONAL_WORK,
     AFTER_FORMAT_SLEEP,
     ARCHIVE_CURRENT_WS,
     BONUS_WS,
     ENG_WS_COL_NAMES,
-    FIRST_SHEET,
     PROJECT_ARCHIVE,
     RESULT_WS,
     SETTINGS_WS,
 )
-from src.salary_bonus.config.environment import (
-    CREDS_PATH,
-    EMAILS,
-    ENDPOINT_ATTENDANCE_SHEET,
-)
-from src.salary_bonus.exceptions import NonValidEmailsError
+from src.salary_bonus.config.environment import CREDS_PATH, ENDPOINT_ATTENDANCE_SHEET
 from src.salary_bonus.logger import logging
 from src.salary_bonus.worksheets.google_sheets_manager import sheets_manager
 from src.salary_bonus.worksheets.utils import (
     color_comp_correction,
     color_overdue_deadline,
+    format_bonus_spreadsheet,
     format_new_engineer_ws,
     format_new_result_ws,
     format_settings_ws,
@@ -37,7 +33,7 @@ gc = gspread.service_account(filename=CREDS_PATH)
 
 def create_new_ws_project_archive(spreadsheet: Spreadsheet) -> Worksheet:
     """
-    Создает новый лист для архива проектов
+    Создает новый лист для архива проектов/доп. работ
     с таким же форматированием, как у листа прошлого года.
     """
     logging.info(f"Создание нового листа {dt.now().year} в таблице проектов.")
@@ -77,21 +73,19 @@ def connect_to_project_archive() -> Worksheet:
     return ws
 
 
-def format_bonus_spreadsheet(spreadsheet: Spreadsheet) -> None:
-    for email in EMAILS.split():
-        try:
-            spreadsheet.share(email, perm_type="user", role="writer", notify=True)
-        except gspread.exceptions.APIError as error:
-            logging.exception("Переданы невалидные emails в .env")
-            raise NonValidEmailsError(error)
+def connect_to_add_work_archive() -> Worksheet:
+    """
+    Открывает лист с архивом доп. работ.
+    При смене года создает новый лист.
+    """
+    archive_spreadsheet: Spreadsheet = sheets_manager.get_spreadsheet(ADDITIONAL_WORK)
 
-    sheets_manager.get_or_create_worksheet(
-        spreadsheet=spreadsheet, title=SETTINGS_WS, rows=100, formatter=format_settings_ws
-    )
-    sheet1 = spreadsheet.worksheet(FIRST_SHEET)
-    spreadsheet.del_worksheet(sheet1)
+    ws = sheets_manager.get_worksheet(archive_spreadsheet, ARCHIVE_CURRENT_WS)
 
-    sheets_manager.invalidate_spreadsheet(spreadsheet)
+    if not ws:
+        ws = create_new_ws_project_archive(archive_spreadsheet)
+
+    return ws
 
 
 def connect_to_settings_ws() -> Worksheet:
