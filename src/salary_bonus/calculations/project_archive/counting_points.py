@@ -186,16 +186,23 @@ def calculate_deadline(start_date: dt.date, work_days: int, row: Series) -> dt.d
 
 
 def check_spend_time(
-    row: Series, points: int, df: DataFrame, amount: int
-) -> Union[float, str]:
+    row: Series, points: int, df: DataFrame, amount: int, archive_sh: bool = True
+) -> float | str:
     """
     Проверка на соблюдение дедлайнов проекта.
     Если проект выполнен в срок из расчета 1 балл = 5 рабочим дням,
     остаются те же баллы. Если дедлайн был просрочен, полученные
     баллы умножаются на понижающий коэффициент.
+
+    Args:
+        row (Series): строка с данными проекта
+        points (int): баллы за проект
+        df (DataFrame): весь датафрейм таблицы
+        amount (int): кол-во блок-контейнеров
+        archive_sh (bool): данные с таблицы архив проектов
     """
     coefficient = 0.9
-    if "блок-контейнер" in row["Тип объекта"].strip().lower():
+    if archive_sh and "блок-контейнер" in row["Тип объекта"].strip().lower():
         days_deadline = amount + 4
     else:
         days_deadline = points * 5
@@ -207,7 +214,9 @@ def check_spend_time(
 
     deadline = calculate_deadline(start_date, days_deadline, row)
     deadline_str = deadline.strftime("%d.%m.%Y")
-    df.loc[df["Шифр (ИСП)"] == row["Шифр (ИСП)"], "Дедлайн"] = deadline_str
+
+    if archive_sh:
+        df.loc[df["Шифр (ИСП)"] == row["Шифр (ИСП)"], "Дедлайн"] = deadline_str
 
     try:
         end_date = dt.strptime(row["Дата окончания проекта"], "%d.%m.%Y").date()

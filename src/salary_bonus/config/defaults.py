@@ -42,3 +42,12 @@ BONUS_WS = f"1Премирование{dt.now().year}"
 ARCHIVE_CURRENT_WS = f"{dt.now().year}"
 FIRST_SHEET = "Sheet1"
 RESULT_WS = "Итоги"
+
+# additional work types
+ADD_WORK_TYPES = [
+    "ГР Модульная установка",
+    "ГР Модульная установка 500+",
+    "ГР Централизованная установка",
+    "Подготовка спецификации",
+    "Расстановка оборудования",
+]

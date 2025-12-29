@@ -18,9 +18,10 @@ from src.salary_bonus.calculations.additional_archive.process import (
     process_additional_work_data,
 )
 from src.salary_bonus.calculations.lead_results import process_lead_data
-from src.salary_bonus.calculations.project_archive.process import (
-    process_project_archive_data,
-)
+
+# from src.salary_bonus.calculations.project_archive.process import (
+#     process_project_archive_data,
+# )
 from src.salary_bonus.logger import logging
 from src.salary_bonus.notification.telegram.bot import TelegramNotifier
 from src.salary_bonus.utils import get_employees, get_project_archive_data
@@ -60,23 +61,24 @@ async def main() -> None:
         list_of_engineers = employees_data["engineers"]
 
         # Рассчет баллов по основным проектам для проектировщиков
-        if len(list_of_engineers) > 0:
-            archive_points = process_project_archive_data(list_of_engineers, df)
-        else:
-            msg = (
-                "Нет данных о проектировщиках для расчета на листе 'Настройки'."
-                " Расчет не будет произведен."
-            )
-            logging.warning(
-                msg + f"\n\nПолученные данные с листа 'Настройки':\n {employees_data}"
-            )
-            await tg_bot.send_message(msg)
-            sheets_manager.invalidate()
-            await tg_bot.close()
-            return
+        # if len(list_of_engineers) > 0:
+        #     archive_points = process_project_archive_data(list_of_engineers, df)
+        # else:
+        #     msg = (
+        #         "Нет данных о проектировщиках для расчета на листе 'Настройки'."
+        #         " Расчет не будет произведен."
+        #     )
+        #     logging.warning(
+        #         msg + f"\n\nПолученные данные с листа 'Настройки':\n {employees_data}"
+        #     )
+        #     await tg_bot.send_message(msg)
+        #     sheets_manager.invalidate()
+        #     await tg_bot.close()
+        #     return
 
         # Рассчет баллов по дополнительным проектам для проектировщиков
-        process_additional_work_data(archive_points, list_of_engineers, tg_bot)
+        archive_points = {}
+        await process_additional_work_data(archive_points, list_of_engineers, tg_bot)
         # TODO
 
         # Рассчет баллов для руководителей
