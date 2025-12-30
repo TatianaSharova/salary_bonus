@@ -8,6 +8,8 @@ from src.salary_bonus.config.defaults import ADDITIONAL_WORK
 from src.salary_bonus.logger import logging
 from src.salary_bonus.utils import get_add_work_data
 
+# from src.salary_bonus.worksheets.worksheets import send_project_data_to_spreadsheet
+
 # from src.salary_bonus.worksheets.worksheets import connect_to_add_work_archive
 
 
@@ -21,8 +23,6 @@ async def process_additional_work_data(
     results = {}
 
     add_work_data_df: pd.DataFrame = get_add_work_data()
-
-    print(add_work_data_df)
 
     if add_work_data_df is None:
         await tg_bot.send_message(
@@ -52,5 +52,7 @@ async def process_additional_work_data(
         engineer_projects["Баллы"] = engineer_projects.apply(
             count_add_points, axis=1, args=(engineer_projects,)
         )
+
+        # send_project_data_to_spreadsheet(engineer_projects, engineer)
 
     return results

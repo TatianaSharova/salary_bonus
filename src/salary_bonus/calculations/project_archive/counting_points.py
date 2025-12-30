@@ -210,13 +210,19 @@ def check_spend_time(
     try:
         start_date = dt.strptime(row["Дата начала проекта"], "%d.%m.%Y").date()
     except ValueError:
-        return "Некорректно введены даты."
+        return "Некорректно введены даты"
 
     deadline = calculate_deadline(start_date, days_deadline, row)
     deadline_str = deadline.strftime("%d.%m.%Y")
 
     if archive_sh:
         df.loc[df["Шифр (ИСП)"] == row["Шифр (ИСП)"], "Дедлайн"] = deadline_str
+    else:
+        df.loc[
+            df["Шифр проекта/Номера расчета (ТактГаз)"]
+            == row["Шифр проекта/Номера расчета (ТактГаз)"],
+            "Дедлайн",
+        ] = deadline_str
 
     try:
         end_date = dt.strptime(row["Дата окончания проекта"], "%d.%m.%Y").date()
