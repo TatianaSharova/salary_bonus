@@ -8,13 +8,9 @@ from src.salary_bonus.config.defaults import ADDITIONAL_WORK
 from src.salary_bonus.logger import logging
 from src.salary_bonus.utils import get_add_work_data
 
-# from src.salary_bonus.worksheets.worksheets import send_project_data_to_spreadsheet
-
-# from src.salary_bonus.worksheets.worksheets import connect_to_add_work_archive
-
 
 async def process_additional_work_data(
-    archive_points: dict[str, pd.DataFrame], engineers: list[str], tg_bot: aiogram.Bot
+    engineers: list[str], tg_bot: aiogram.Bot
 ) -> dict[str, pd.DataFrame]:
     """
     Собирает данные по дополнительным проектам из архива расчетов
@@ -32,7 +28,7 @@ async def process_additional_work_data(
         return results
     elif isinstance(add_work_data_df, pd.DataFrame) and add_work_data_df.empty:
         logging.warning(
-            f"Таблица '{ADDITIONAL_WORK}' пуста, расчет доп. работ не будет произведен."
+            f'Таблица "{ADDITIONAL_WORK}" пуста, расчет доп. работ не будет произведен.'
         )
         return results
 
@@ -53,6 +49,9 @@ async def process_additional_work_data(
             count_add_points, axis=1, args=(engineer_projects,)
         )
 
-        # send_project_data_to_spreadsheet(engineer_projects, engineer)
+        # send_data_to_spreadsheet(engineer_projects, engineer)
+    import time
+
+    time.sleep(10)
 
     return results

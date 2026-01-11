@@ -6,10 +6,10 @@ import holidays
 import pandas as pd
 from pandas.core.frame import DataFrame
 
+from src.salary_bonus.config.defaults import ADDITIONAL_WORK, PROJECT_ARCHIVE
 from src.salary_bonus.logger import logging
 from src.salary_bonus.worksheets.worksheets import (
-    connect_to_add_work_archive,
-    connect_to_project_archive,
+    connect_to_archive,
     connect_to_settings_ws,
 )
 
@@ -19,13 +19,13 @@ pd.options.mode.chained_assignment = None
 def get_project_archive_data() -> DataFrame | None:
     """
     Получает данные из архива проектов.
-    Возвращает датафрейм с данными или None, если данных нет.
+    Возвращает датафрейм с данными или None, если таблица не найдена.
     """
     try:
-        worksheet = connect_to_project_archive()
+        worksheet = connect_to_archive(PROJECT_ARCHIVE)
     except gspread.exceptions.SpreadsheetNotFound as err:
         logging.exception(err)
-        return
+        return None
 
     df = pd.DataFrame(worksheet.get_all_records(numericise_ignore=["all"]))
 
@@ -38,10 +38,10 @@ def get_add_work_data() -> DataFrame | None:
     Возвращает датафрейм с данными или None, если данных нет.
     """
     try:
-        worksheet = connect_to_add_work_archive()
+        worksheet = connect_to_archive(ADDITIONAL_WORK)
     except gspread.exceptions.SpreadsheetNotFound as err:
         logging.exception(err)
-        return
+        return None
 
     df = pd.DataFrame(worksheet.get_all_records(numericise_ignore=["all"]))
 

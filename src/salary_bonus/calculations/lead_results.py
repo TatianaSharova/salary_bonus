@@ -6,14 +6,7 @@ from src.salary_bonus.worksheets.worksheets import send_lead_res_to_ws
 def collect_lead_results(
     eng_points: dict[str, pd.DataFrame], leads: dict[str, list[str]]
 ) -> dict[str, pd.DataFrame]:
-    """
-    Docstring for collect_lead_results
-
-    :param eng_points: Description
-    :type eng_points: dict[str, pd.DataFrame]
-    :param leads: Description
-    :type leads: dict[str, list[str]]
-    """
+    """Собирает результаты по руководителям группы."""
     result: dict[str, pd.DataFrame] = {}
 
     # все месяцы, которые встречаются в данных
@@ -55,13 +48,6 @@ def collect_lead_results(
 
 
 def process_lead_data(eng_points: dict[str, pd.DataFrame], leads: dict[str, list[str]]):
-    """
-    Docstring for process_lead_data
-
-    :param eng_points: Description
-    :type eng_points: dict[str, DataFrame]
-    :param leads: Description
-    :type leads: dict[str, list[str]]
-    """
+    """Обрабатывает и отправляет данные по руководителям группы."""
     lead_results = collect_lead_results(eng_points, leads)
     send_lead_res_to_ws(lead_results)

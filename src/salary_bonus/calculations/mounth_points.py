@@ -1,9 +1,9 @@
-from datetime import datetime as dt
 from typing import Any, Dict
 
 import pandas as pd
 from pandas import DataFrame, Series
 
+from src.salary_bonus.config.defaults import CURRENT_YEAR
 from src.salary_bonus.logger import logging
 
 
@@ -11,16 +11,18 @@ def calculate_month_points(row: Series, column: str) -> Dict[str, Any] | None:
     """
     Формирует запись для последующей агрегации значений по месяцам.
 
-    Ожидаемая структура строки DataFrame (`row`):
-        - "Дата окончания проекта": str | datetime
-            Дата завершения проекта в формате "ДД.ММ.ГГГГ"
-        - column (str): int | float
-            Колонка с числовым значением (баллы, сумма, коэффициент и т.п.),
-            название которой передаётся аргументом `column`
+    Args:
+      row: Одна строка исходного DataFrame (pandas.Series)
+            Ожидаемая структура строки DataFrame (`row`):
+                - "Дата окончания проекта": str | datetime
+                    Дата завершения проекта в формате "ДД.ММ.ГГГГ"
+                - column (str): int | float
+                    Колонка с числовым значением,
+                    название которой передаётся аргументом `column`
+      column: Название столбца DataFrame, содержащего числовое значение
 
-    :param row: Одна строка исходного DataFrame (pandas.Series)
-    :param column: Название столбца DataFrame, содержащего числовое значение
-    :return: Словарь вида:
+    Returns:
+      Словарь вида:
         {
             "Месяц": pandas.Period("YYYY-MM", freq="M"),
             <column>: int | float
@@ -82,7 +84,7 @@ def calculate_by_month(df: DataFrame, column: str) -> DataFrame:
     if not monthly_points:
         # Формируем пустую таблицу с нулями на все месяцы текущего года
         months = pd.period_range(
-            start=f"{dt.now().year}-01", end=f"{dt.now().year}-12", freq="M"
+            start=f"{CURRENT_YEAR}-01", end=f"{CURRENT_YEAR}-12", freq="M"
         )
         return pd.DataFrame(
             {"Месяц": [f"{m.month:02d}-{m.year}" for m in months], column: [0] * 12}
@@ -98,7 +100,7 @@ def calculate_by_month(df: DataFrame, column: str) -> DataFrame:
 
     # Создаем полный ряд месяцев текущего года
     months = pd.period_range(
-        start=f"{dt.now().year}-01", end=f"{dt.now().year}-12", freq="M"
+        start=f"{CURRENT_YEAR}-01", end=f"{CURRENT_YEAR}-12", freq="M"
     )
     full_df = pd.DataFrame({"Месяц": [f"{m.month:02d}-{m.year}" for m in months]})
 

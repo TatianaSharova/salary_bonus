@@ -140,7 +140,7 @@ def format_settings_ws(sheet: Worksheet) -> None:
             "textFormat": {"fontSize": 12},
         },
     )
-    set_column_widths(sheet, [("A", 300), ("B", 300), ("C", 300)])
+    set_column_widths(sheet, [("A", 200), ("B", 200), ("C", 200)])
 
 
 def format_new_result_ws(sheet: Worksheet) -> None:

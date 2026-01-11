@@ -11,7 +11,8 @@ from src.salary_bonus.calculations.project_archive.counting_points import count_
 from src.salary_bonus.calculations.results import do_results
 from src.salary_bonus.config.defaults import AFTER_ENG_SLEEP
 from src.salary_bonus.logger import logging
-from src.salary_bonus.utils import is_point
+from src.salary_bonus.notification.telegram.bot import TelegramNotifier
+from src.salary_bonus.utils import get_project_archive_data, is_point
 from src.salary_bonus.worksheets.worksheets import (
     connect_to_engineer_ws,
     send_month_data_to_spreadsheet,
@@ -25,7 +26,7 @@ def correct_complexity(engineer: str, engineer_projects: DataFrame) -> DataFrame
     и заменяет неверные данные.
     """
     logging.info("Проверка на необходимость корректировки сложности проектов.")
-    worksheet = connect_to_engineer_ws(engineer)
+    worksheet = connect_to_engineer_ws(engineer, False)
 
     if worksheet:
         raw_data = worksheet.get("J1:J200")
@@ -74,8 +75,8 @@ def find_sum_equipment(df: DataFrame) -> DataFrame:
     return quaters
 
 
-def process_project_archive_data(
-    engineers: list[str], df: DataFrame
+async def process_project_archive_data(
+    engineers: list[str], tg_bot: TelegramNotifier
 ) -> dict[str, DataFrame]:
     """
     Собирает данные из архива проектов, производит расчет баллов
@@ -87,7 +88,7 @@ def process_project_archive_data(
 
     Args:
         engineers (list[str]): список инженеров, для которых надо делать расчет
-        df (DataFrame): датафрейм с таблицы архива проектов
+        tg_bot (TelegramNotifier): тг-бот для отправки уведомлений
 
     Returns:
         (dict[str, DataFrame]): словарь, где key - проектировщик, для которого
@@ -95,6 +96,19 @@ def process_project_archive_data(
         | Месяц (pandas.Period("YYYY-MM", freq="M")) | Баллы (float) |
     """
     results = {}
+
+    df = get_project_archive_data()
+
+    if df is None:
+        await tg_bot.send_message(
+            'Ошибка: таблица "Таблица проектов" не найдена.\n'
+            "Возможно название было сменено.",
+        )
+        return results
+    elif isinstance(df, pd.DataFrame) and df.empty:
+        msg = "Основная таблица проектов пуста, расчет по ней не будет произведен."
+        logging.warning(msg)
+        return results
 
     for engineer in engineers:
         logging.info(f"Начинается расчет баллов для проектировщика {engineer}.")

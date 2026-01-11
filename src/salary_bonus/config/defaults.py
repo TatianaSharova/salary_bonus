@@ -1,18 +1,19 @@
 from datetime import datetime as dt
 
+CURRENT_YEAR = str(dt.now().year)
 MONTHS = {
-    "1": f"Январь {dt.now().year}",
-    "2": f"Февраль {dt.now().year}",
-    "3": f"Март {dt.now().year}",
-    "4": f"Апрель {dt.now().year}",
-    "5": f"Май {dt.now().year}",
-    "6": f"Июнь {dt.now().year}",
-    "7": f"Июль {dt.now().year}",
-    "8": f"Август {dt.now().year}",
-    "9": f"Сентябрь {dt.now().year}",
-    "10": f"Октябрь {dt.now().year}",
-    "11": f"Ноябрь {dt.now().year}",
-    "12": f"Декабрь {dt.now().year}",
+    "1": f"Январь {CURRENT_YEAR}",
+    "2": f"Февраль {CURRENT_YEAR}",
+    "3": f"Март {CURRENT_YEAR}",
+    "4": f"Апрель {CURRENT_YEAR}",
+    "5": f"Май {CURRENT_YEAR}",
+    "6": f"Июнь {CURRENT_YEAR}",
+    "7": f"Июль {CURRENT_YEAR}",
+    "8": f"Август {CURRENT_YEAR}",
+    "9": f"Сентябрь {CURRENT_YEAR}",
+    "10": f"Октябрь {CURRENT_YEAR}",
+    "11": f"Ноябрь {CURRENT_YEAR}",
+    "12": f"Декабрь {CURRENT_YEAR}",
 }
 
 # ws formating
@@ -38,8 +39,8 @@ AFTER_ENG_SLEEP = 10
 PROJECT_ARCHIVE = "Таблица проектов"
 ADDITIONAL_WORK = "Таблица доп. работ"
 SETTINGS_WS = "настройки1"
-BONUS_WS = f"1Премирование{dt.now().year}"
-ARCHIVE_CURRENT_WS = f"{dt.now().year}"
+BONUS_WS = f"1Премирование{CURRENT_YEAR}"  # TODO rename to normal
+ARCHIVE_CURRENT_WS = CURRENT_YEAR
 FIRST_SHEET = "Sheet1"
 RESULT_WS = "Итоги"
 

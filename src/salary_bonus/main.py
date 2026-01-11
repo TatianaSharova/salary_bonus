@@ -18,13 +18,12 @@ from src.salary_bonus.calculations.additional_archive.process import (
     process_additional_work_data,
 )
 from src.salary_bonus.calculations.lead_results import process_lead_data
-
-# from src.salary_bonus.calculations.project_archive.process import (
-#     process_project_archive_data,
-# )
+from src.salary_bonus.calculations.project_archive.process import (
+    process_project_archive_data,
+)
 from src.salary_bonus.logger import logging
 from src.salary_bonus.notification.telegram.bot import TelegramNotifier
-from src.salary_bonus.utils import get_employees, get_project_archive_data
+from src.salary_bonus.utils import get_employees
 from src.salary_bonus.worksheets.google_sheets_manager import sheets_manager
 
 pd.options.mode.chained_assignment = None
@@ -38,47 +37,27 @@ async def main() -> None:
     logging.info("Запущена основная задача.")
     tg_bot = TelegramNotifier()
 
-    df = get_project_archive_data()
-
-    if df is None:
-        await tg_bot.send_message(
-            'Ошибка: таблица "Таблица проектов" не найдена.\n'
-            "Возможно название было сменено.",
-        )
-        sheets_manager.invalidate()
-        await tg_bot.close()
-        return
-    elif isinstance(df, pd.DataFrame) and df.empty:
-        msg = "Таблица проектов пуста, расчет не будет произведен."
-        logging.warning(msg)
-        await tg_bot.send_message(msg)
-        sheets_manager.invalidate()
-        await tg_bot.close()
-        return
-
     try:
         employees_data = get_employees()
         list_of_engineers = employees_data["engineers"]
 
-        # Рассчет баллов по основным проектам для проектировщиков
-        # if len(list_of_engineers) > 0:
-        #     archive_points = process_project_archive_data(list_of_engineers, df)
-        # else:
-        #     msg = (
-        #         "Нет данных о проектировщиках для расчета на листе 'Настройки'."
-        #         " Расчет не будет произведен."
-        #     )
-        #     logging.warning(
-        #         msg + f"\n\nПолученные данные с листа 'Настройки':\n {employees_data}"
-        #     )
-        #     await tg_bot.send_message(msg)
-        #     sheets_manager.invalidate()
-        #     await tg_bot.close()
-        #     return
+        if len(list_of_engineers) == 0:
+            msg = (
+                "Нет данных о проектировщиках для расчета на листе 'Настройки'."
+                " Расчет не будет произведен."
+            )
+            logging.warning(
+                msg + f'\n\nПолученные данные с листа "Настройки":\n {employees_data}'
+            )
+            await tg_bot.send_message(msg)
+            return
+
+        # Расчет баллов по основным проектам для проектировщиков
+        archive_points = await process_project_archive_data(list_of_engineers, tg_bot)
 
         # Рассчет баллов по дополнительным проектам для проектировщиков
         archive_points = {}
-        await process_additional_work_data(archive_points, list_of_engineers, tg_bot)
+        await process_additional_work_data(list_of_engineers, tg_bot)
         # TODO
 
         # Рассчет баллов для руководителей
@@ -91,23 +70,18 @@ async def main() -> None:
             )
             logging.warning(msg)
             await tg_bot.send_message(msg)
-            sheets_manager.invalidate()
-            await tg_bot.close()
 
         gip = employees_data["chief"]
         if len(gip) > 0:
+            # TODO: реализовать расчет баллов для ГИПов
             ...
         else:
-            msg = (
-                "Баллы для руководителей посчитаны и отправлены на листы руководителей. "
-                " Для расчета баллов главных инженеров не найдено данных."
-            )
+            msg = "Для расчета баллов ГИП не найдено данных."
             logging.warning(msg)
             await tg_bot.send_message(msg)
-            sheets_manager.invalidate()
-            await tg_bot.close()
 
         await tg_bot.send_message("Расчет баллов окончен.")
+
     except Exception as error:
         logging.exception(error)
         error_name = type(error).__name__

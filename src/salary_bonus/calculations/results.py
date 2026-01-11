@@ -2,9 +2,8 @@ from datetime import datetime as dt
 
 import pandas as pd
 from pandas.core.frame import DataFrame
-from pandas.core.series import Series
 
-from src.salary_bonus.config.defaults import MONTHS
+from src.salary_bonus.config.defaults import CURRENT_YEAR, MONTHS
 from src.salary_bonus.logger import logging
 from src.salary_bonus.worksheets.worksheets import (
     get_attendance_sheet_ws,
@@ -22,7 +21,7 @@ def count_average_points(res: dict) -> DataFrame:
     )
     merged_df = pd.concat(res.values(), ignore_index=True)
 
-    filtered_df = merged_df[merged_df["Месяц"].str.contains(f"{dt.now().year}")]
+    filtered_df = merged_df[merged_df["Месяц"].str.contains(CURRENT_YEAR)]
 
     average_df = filtered_df.groupby("Месяц").mean().reset_index()
     average_df["Баллы"] = average_df["Баллы"].apply(lambda x: int(x))
@@ -84,11 +83,12 @@ def do_results(results: dict, sum_equipment: DataFrame) -> None:
     average_df = count_average_points(results)
     res_df = pd.merge(average_df, sum_equipment, on="Месяц", how="outer")
     res_df["Средний балл"] = res_df["Средний балл"].fillna(0)
-    res_df["Сумма заложенного оборудования"] = res_df["Сумма заложенного оборудования"].fillna(0)
+    res_df["Сумма заложенного оборудования"] = res_df[
+        "Сумма заложенного оборудования"
+    ].fillna(0)
     send_results_data_ws(res_df)
 
     # Сбор и отправка рабочих часов
     engineers = list(results.keys())
     working_hours_per_quarter = get_working_hours_data(engineers)
     send_hours_data_ws(working_hours_per_quarter)
-
