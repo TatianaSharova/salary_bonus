@@ -1,6 +1,7 @@
 from datetime import datetime as dt
 
-CURRENT_YEAR = str(dt.now().year)
+CURRENT_YEAR = str(dt.now().year)  # TODO return
+CURRENT_YEAR = "2025"
 MONTHS = {
     "1": f"Январь {CURRENT_YEAR}",
     "2": f"Февраль {CURRENT_YEAR}",
@@ -29,6 +30,16 @@ ENG_WS_COL_NAMES = [
     "Дата окончания проекта",
     "Дедлайн",
     "Автоматически определенная сложность",
+]
+ADD_WORK_COL_NAMES = [
+    "Страна",
+    "Наименование объекта",
+    "Шифр проекта/Номера расчета (ТактГаз)",
+    "Разработал",
+    "Баллы",
+    "Дата начала проекта",
+    "Дата окончания проекта",
+    "Дедлайн",
 ]
 
 # sleep time in seconds

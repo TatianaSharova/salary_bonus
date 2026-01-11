@@ -15,7 +15,6 @@ from src.salary_bonus.notification.telegram.bot import TelegramNotifier
 from src.salary_bonus.utils import get_project_archive_data, is_point
 from src.salary_bonus.worksheets.worksheets import (
     connect_to_engineer_ws,
-    send_month_data_to_spreadsheet,
     send_project_data_to_spreadsheet,
 )
 
@@ -77,7 +76,7 @@ def find_sum_equipment(df: DataFrame) -> DataFrame:
 
 async def process_project_archive_data(
     engineers: list[str], tg_bot: TelegramNotifier
-) -> dict[str, DataFrame]:
+) -> tuple[dict[str, DataFrame], dict[str, DataFrame]]:
     """
     Собирает данные из архива проектов, производит расчет баллов
     и отправляет полученные данные в таблицу "Премирование"
@@ -91,11 +90,15 @@ async def process_project_archive_data(
         tg_bot (TelegramNotifier): тг-бот для отправки уведомлений
 
     Returns:
-        (dict[str, DataFrame]): словарь, где key - проектировщик, для которого
-        получилось выполнить расчет, value  - DataFrame вида:
-        | Месяц (pandas.Period("YYYY-MM", freq="M")) | Баллы (float) |
+        tuple[dict[str, DataFrame], dict[str, DataFrame]]: кортеж из двух
+        словарей. Первый содержит рассчитанные данные по месяцам, где key -
+        проектировщик, value - DataFrame вида:
+        | Месяц (pandas.Period("YYYY-MM", freq="M")) | Баллы (float) |.
+        Второй содержит данные по проектам из основной таблицы, где key -
+        проектировщик, value - DataFrame с исходными строками проектов.
     """
-    results = {}
+    results: dict[str, DataFrame] = {}
+    eng_data: dict[str, DataFrame] = {}
 
     df = get_project_archive_data()
 
@@ -104,11 +107,11 @@ async def process_project_archive_data(
             'Ошибка: таблица "Таблица проектов" не найдена.\n'
             "Возможно название было сменено.",
         )
-        return results
+        return results, eng_data
     elif isinstance(df, pd.DataFrame) and df.empty:
         msg = "Основная таблица проектов пуста, расчет по ней не будет произведен."
         logging.warning(msg)
-        return results
+        return results, eng_data
 
     for engineer in engineers:
         logging.info(f"Начинается расчет баллов для проектировщика {engineer}.")
@@ -131,25 +134,16 @@ async def process_project_archive_data(
         engineer_projects["Баллы"] = engineer_projects.apply(
             count_points, axis=1, args=(engineer_projects, blocks)
         )
+
+        eng_data[engineer] = engineer_projects  # записываем данные с основной таблицы
         send_project_data_to_spreadsheet(engineer_projects, engineer)
 
         engineer_projects_filt = engineer_projects[
             engineer_projects["Баллы"].apply(is_point)
         ]
 
-        engineer_projects_filtered = engineer_projects_filt[
-            [
-                "Шифр (ИСП)",
-                "Разработал",
-                "Дата начала проекта",
-                "Дата окончания проекта",
-                "Баллы",
-            ]
-        ]
-
-        if not engineer_projects_filtered.empty:
-            months = calculate_by_month(engineer_projects_filtered, column="Баллы")
-            send_month_data_to_spreadsheet(months, engineer)
+        if not engineer_projects_filt.empty:
+            months = calculate_by_month(engineer_projects_filt, column="Баллы")
             results[engineer] = months
             logging.info(
                 f"Расчет баллов для проектировщика {engineer} завершен. "
@@ -164,6 +158,6 @@ async def process_project_archive_data(
 
     sum_equipment = find_sum_equipment(df)
 
-    do_results(results, sum_equipment)
+    do_results(results, sum_equipment)  # TODO перенос этого в main для сбора всех баллов
 
-    return results
+    return results, eng_data

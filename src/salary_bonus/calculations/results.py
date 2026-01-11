@@ -77,8 +77,6 @@ def do_results(results: dict, sum_equipment: DataFrame) -> None:
     """
     Отправляет данные о плане и премиальных баллах в таблицу.
     """
-    logging.info("Начинаем подсчет квартального плана и премиальных баллов.")
-
     # Подсчет и отправка средних баллов
     average_df = count_average_points(results)
     res_df = pd.merge(average_df, sum_equipment, on="Месяц", how="outer")
@@ -90,5 +88,5 @@ def do_results(results: dict, sum_equipment: DataFrame) -> None:
 
     # Сбор и отправка рабочих часов
     engineers = list(results.keys())
-    working_hours_per_quarter = get_working_hours_data(engineers)
-    send_hours_data_ws(working_hours_per_quarter)
+    working_hours = get_working_hours_data(engineers)
+    send_hours_data_ws(working_hours)

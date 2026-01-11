@@ -4,6 +4,7 @@ from gspread.worksheet import Worksheet
 from pandas.core.frame import DataFrame
 
 from src.salary_bonus.config.defaults import (
+    ADD_WORK_COL_NAMES,
     AFTER_FORMAT_SLEEP,
     ARCHIVE_CURRENT_WS,
     BONUS_WS,
@@ -129,25 +130,71 @@ def send_project_data_to_spreadsheet(df: DataFrame, engineer: str) -> None:
 
     eng_small = df[ENG_WS_COL_NAMES]
 
+    # Очистка
+    sheet.batch_clear(["A2:I200"])
+    # Удаление форматирования
+    sheet.format(
+        "A2:I200",
+        {
+            "backgroundColor": {"red": 1, "green": 1, "blue": 1},
+            "textFormat": {"bold": False},
+        },
+    )
+
     sheet.update([eng_small.columns.values.tolist()] + eng_small.values.tolist())
 
     color_overdue_deadline(eng_small, sheet)
     color_comp_correction(df, sheet)
 
 
+def send_add_work_data_to_spreadsheet(
+    df: DataFrame, engineer: str, archive_data: dict[str, DataFrame]
+) -> None:
+    """
+    Отправляет данные с баллами за доп. работы в таблицу "Премирование".
+    """
+    logging.info("Отправка данных о доп. работах на лист проектировщика.")
+    sheet = connect_to_engineer_ws(engineer)
+
+    eng_small = df[ADD_WORK_COL_NAMES]
+
+    if engineer in archive_data:
+        main_projects_length = len(archive_data[engineer])
+        start_row = main_projects_length + 4
+        sheet.update(
+            [eng_small.columns.values.tolist()] + eng_small.values.tolist(),
+            range_name=f"A{start_row}:H200",
+        )
+        sheet.format(
+            f"A{start_row}:H{start_row}",
+            {
+                "backgroundColor": {"red": 1.0, "green": 0.85, "blue": 0.6},
+                "textFormat": {"bold": True},
+            },
+        )
+        start_row += 1
+    else:
+        start_row = 1
+        sheet.update([eng_small.columns.values.tolist()] + eng_small.values.tolist())
+
+    color_overdue_deadline(eng_small, sheet, start_row)
+
+
 def send_month_data_to_spreadsheet(df: DataFrame, engineer: str) -> None:
     """
-    Отсылает данные о баллах, заработанных в каждом квартале
+    Отсылает данные о баллах, заработанных в каждом месяце
     в таблицу "Премирование".
     """
-    logging.info("Отправка данных о баллах по месяцам на лист проектировщика.")
+    logging.info(
+        f"Отправка данных о баллах по месяцам на лист проектировщика {engineer}."
+    )
     sheet = connect_to_engineer_ws(engineer)
 
     sheet.update([df.columns.values.tolist()] + df.values.tolist(), range_name="L1:M13")
 
 
 def send_results_data_ws(df: DataFrame) -> None:
-    """Отправляет данные о средних баллах на лист "Настройки"."""
+    """Отправляет данные о средних баллах на лист "Итоги"."""
     spreadsheet: Spreadsheet = sheets_manager.get_or_create_spreadsheet(
         BONUS_WS, format_bonus_spreadsheet
     )
@@ -160,19 +207,9 @@ def send_results_data_ws(df: DataFrame) -> None:
         sleep_after=AFTER_FORMAT_SLEEP,
     )
 
-    logging.info('Отправка данных о средних баллах на лист "Настройки".')
+    logging.info('Отправка данных о средних баллах на лист "Итоги".')
     result_ws.update(
         [df.columns.values.tolist()] + df.values.tolist(), range_name="P1:R15"
-    )
-
-
-def send_bonus_data_ws(engineer: str, df: DataFrame) -> None:
-    """Отправляет данные о выполнении плана на лист проектировщика."""
-    worksheet = connect_to_engineer_ws(engineer)
-
-    logging.info(f"Отправка данных о выполнении плана проектировщика {engineer}.")
-    worksheet.update(
-        [df.columns.values.tolist()] + df.values.tolist(), range_name="N1:Q30"
     )
 
 

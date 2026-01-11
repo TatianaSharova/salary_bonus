@@ -142,3 +142,50 @@ def define_integer(integer: str) -> float | int:
         else:
             integer = 0
     return integer
+
+
+def sum_points_by_month(
+    d1: dict[str, DataFrame],
+    d2: dict[str, DataFrame],
+    month_col: str = "Месяц",
+    points_col: str = "Баллы",
+) -> dict[str, DataFrame]:
+    """
+    Суммирует баллы по месяцам для каждого проектировщика из двух словарей.
+
+    Ожидается, что в df есть колонки:
+      - month_col: pandas.Period('YYYY-MM', freq='M') или строка вида 'YYYY-MM'
+      - points_col: float
+
+    Возвращает словарь engineer -> df с колонками [month_col, points_col],
+    где points_col — сумма из обоих источников по каждому месяцу.
+    """
+    result: dict[str, DataFrame] = {}
+
+    all_engineers = set(d1) | set(d2)
+
+    for eng in all_engineers:
+        frames: list[DataFrame] = []
+        if eng in d1 and d1[eng] is not None and not d1[eng].empty:
+            frames.append(d1[eng][[month_col, points_col]].copy())
+        if eng in d2 and d2[eng] is not None and not d2[eng].empty:
+            frames.append(d2[eng][[month_col, points_col]].copy())
+
+        if not frames:
+            result[eng] = pd.DataFrame(columns=[month_col, points_col])
+            continue
+
+        df = pd.concat(frames, ignore_index=True)
+
+        df[points_col] = pd.to_numeric(df[points_col], errors="coerce").fillna(0.0)
+
+        summed = (
+            df.groupby(month_col, as_index=False)[points_col]
+            .sum()
+            .sort_values(month_col)
+            .reset_index(drop=True)
+        )
+
+        result[eng] = summed
+
+    return result

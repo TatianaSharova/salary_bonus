@@ -42,8 +42,6 @@ def collect_lead_results(
 
         result[lead_name] = lead_df
 
-    print(result)
-
     return result
 
 

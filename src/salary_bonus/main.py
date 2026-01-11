@@ -23,8 +23,9 @@ from src.salary_bonus.calculations.project_archive.process import (
 )
 from src.salary_bonus.logger import logging
 from src.salary_bonus.notification.telegram.bot import TelegramNotifier
-from src.salary_bonus.utils import get_employees
+from src.salary_bonus.utils import get_employees, sum_points_by_month
 from src.salary_bonus.worksheets.google_sheets_manager import sheets_manager
+from src.salary_bonus.worksheets.worksheets import send_month_data_to_spreadsheet
 
 pd.options.mode.chained_assignment = None
 pd.set_option("future.no_silent_downcasting", True)
@@ -53,21 +54,26 @@ async def main() -> None:
             return
 
         # Расчет баллов по основным проектам для проектировщиков
-        archive_points = await process_project_archive_data(list_of_engineers, tg_bot)
+        archive_points, eng_data = await process_project_archive_data(
+            list_of_engineers, tg_bot
+        )
 
         # Рассчет баллов по дополнительным проектам для проектировщиков
-        archive_points = {}
-        await process_additional_work_data(list_of_engineers, tg_bot)
-        # TODO
+        add_data_points = await process_additional_work_data(
+            list_of_engineers, tg_bot, eng_data
+        )
+
+        month_res_data = sum_points_by_month(archive_points, add_data_points)
+        print(month_res_data)
+
+        for engineer, df in month_res_data.items():
+            send_month_data_to_spreadsheet(df, engineer)
 
         # Рассчет баллов для руководителей
         if len(list(employees_data["lead"].keys())) > 0:
             process_lead_data(archive_points, employees_data["lead"])
         else:
-            msg = (
-                "Баллы проектировщиков посчитаны и отправлены на листы проектировщиков."
-                " Для расчета баллов руководителей не найдено данных."
-            )
+            msg = "Для расчета баллов руководителей не найдено данных."
             logging.warning(msg)
             await tg_bot.send_message(msg)
 
