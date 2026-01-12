@@ -99,7 +99,6 @@ def format_new_engineer_ws(sheet: Worksheet) -> None:
         sheet, [("A", 100), ("B", 400), ("C", 200), ("D:G", 150), ("I:J", 150)]
     )
     sheet.update([["Корректировка сложности"]], "J1")
-    sheet.update([["Отпуск/отгул/не работал(а) (в часах)"]], "Q1")
     sheet.format(
         "A1:J1",
         {

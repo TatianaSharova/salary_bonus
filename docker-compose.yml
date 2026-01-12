@@ -1,0 +1,10 @@
+services:
+  salary_bonus:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    env_file: .env
+    container_name: salary_bonus
+    restart: unless-stopped
+    environment:
+      PYTHONUNBUFFERED: "1"

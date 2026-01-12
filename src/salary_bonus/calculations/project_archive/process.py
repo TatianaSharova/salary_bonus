@@ -3,16 +3,18 @@ import time
 import pandas as pd
 from pandas.core.frame import DataFrame
 
-from src.salary_bonus.calculations.mounth_points import calculate_by_month
+from src.salary_bonus.calculations.mounth_points import (
+    calculate_by_month,
+    empty_months_df,
+)
 from src.salary_bonus.calculations.project_archive.complexity import (
     set_project_complexity,
 )
 from src.salary_bonus.calculations.project_archive.counting_points import count_points
-from src.salary_bonus.calculations.results import do_results
 from src.salary_bonus.config.defaults import AFTER_ENG_SLEEP
 from src.salary_bonus.logger import logging
 from src.salary_bonus.notification.telegram.bot import TelegramNotifier
-from src.salary_bonus.utils import get_project_archive_data, is_point
+from src.salary_bonus.utils import is_point
 from src.salary_bonus.worksheets.worksheets import (
     connect_to_engineer_ws,
     send_project_data_to_spreadsheet,
@@ -46,36 +48,8 @@ def correct_complexity(engineer: str, engineer_projects: DataFrame) -> DataFrame
     return engineer_projects
 
 
-def find_sum_equipment(df: DataFrame) -> DataFrame:
-    """
-    Считает сумму заложенного оборудования по кварталам.
-    """
-    logging.info("Начинаем подсчет суммы заложенного оборудования по кварталам.")
-    name = "Сумма заложенного оборудования"
-    df[name] = df[name].str.replace("\xa0", "").str.replace(",", ".")
-    df[name] = pd.to_numeric(df[name], errors="coerce")
-
-    equipment_df = df[
-        [
-            "Шифр (ИСП)",
-            "Разработал",
-            "Дата начала проекта",
-            "Дата окончания проекта",
-            "Сумма заложенного оборудования",
-        ]
-    ]
-    equipment_df_filt = equipment_df.dropna(subset=[name])
-    equipment_df_filt = equipment_df_filt[
-        equipment_df_filt["Шифр (ИСП)"] != ""
-    ]  # noqa: E501
-
-    quaters = calculate_by_month(equipment_df_filt, column=name)
-    quaters[name] = quaters[name].apply(lambda x: "{:,.2f}".format(x).replace(",", " "))
-    return quaters
-
-
 async def process_project_archive_data(
-    engineers: list[str], tg_bot: TelegramNotifier
+    df: DataFrame | None, engineers: list[str], tg_bot: TelegramNotifier
 ) -> tuple[dict[str, DataFrame], dict[str, DataFrame]]:
     """
     Собирает данные из архива проектов, производит расчет баллов
@@ -86,6 +60,7 @@ async def process_project_archive_data(
     а также происходит сбор информации о рабочих часах с листа посещаемости.
 
     Args:
+        df (DataFrame): данные из таблицы проектов
         engineers (list[str]): список инженеров, для которых надо делать расчет
         tg_bot (TelegramNotifier): тг-бот для отправки уведомлений
 
@@ -99,8 +74,6 @@ async def process_project_archive_data(
     """
     results: dict[str, DataFrame] = {}
     eng_data: dict[str, DataFrame] = {}
-
-    df = get_project_archive_data()
 
     if df is None:
         await tg_bot.send_message(
@@ -119,6 +92,11 @@ async def process_project_archive_data(
         engineer_projects = df.loc[
             df["Разработал"].str.contains(f"{engineer}")
         ].reset_index(drop=True)
+
+        if engineer_projects.empty:
+            logging.info(f"Нет проектов у проектировщика {engineer}.")
+            continue
+
         engineer_projects["Дедлайн"] = ""
 
         logging.info("Определение сложности проектов.")
@@ -150,14 +128,11 @@ async def process_project_archive_data(
                 f"Ждем 10 секунд."
             )
         else:
+            results[engineer] = empty_months_df(column="Баллы")
             logging.info(
                 f"Нет готовых проектов у проектировщика {engineer}. "
                 f"Переходим к следующему проектировщику через 10 секунд."
             )
         time.sleep(AFTER_ENG_SLEEP)
-
-    sum_equipment = find_sum_equipment(df)
-
-    do_results(results, sum_equipment)  # TODO перенос этого в main для сбора всех баллов
 
     return results, eng_data

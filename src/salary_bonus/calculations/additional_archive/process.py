@@ -6,7 +6,10 @@ import pandas as pd
 from src.salary_bonus.calculations.additional_archive.counting_points import (
     count_add_points,
 )
-from src.salary_bonus.calculations.mounth_points import calculate_by_month
+from src.salary_bonus.calculations.mounth_points import (
+    calculate_by_month,
+    empty_months_df,
+)
 from src.salary_bonus.config.defaults import ADDITIONAL_WORK, AFTER_ENG_SLEEP
 from src.salary_bonus.logger import logging
 from src.salary_bonus.utils import get_add_work_data
@@ -59,6 +62,7 @@ async def process_additional_work_data(
             months = calculate_by_month(engineer_projects, column="Баллы")
             results[engineer] = months
         else:
+            results[engineer] = empty_months_df(column="Баллы")
             logging.info(
                 f"Нет готовых доп. работ у проектировщика {engineer}. "
                 f"Переходим к следующему проектировщику через 10 секунд."

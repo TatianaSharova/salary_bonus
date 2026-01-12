@@ -43,6 +43,15 @@ def calculate_month_points(row: Series, column: str) -> Dict[str, Any] | None:
     }
 
 
+def empty_months_df(column: str) -> pd.DataFrame:
+    months = pd.period_range(
+        start=f"{CURRENT_YEAR}-01", end=f"{CURRENT_YEAR}-12", freq="M"
+    )
+    return pd.DataFrame(
+        {"Месяц": [f"{m.month:02d}-{m.year}" for m in months], column: [0.0] * 12}
+    )
+
+
 def calculate_by_month(df: DataFrame, column: str) -> DataFrame:
     """
     Агрегирует числовые значения указанного столбца по месяцам окончания проектов.
@@ -83,12 +92,7 @@ def calculate_by_month(df: DataFrame, column: str) -> DataFrame:
 
     if not monthly_points:
         # Формируем пустую таблицу с нулями на все месяцы текущего года
-        months = pd.period_range(
-            start=f"{CURRENT_YEAR}-01", end=f"{CURRENT_YEAR}-12", freq="M"
-        )
-        return pd.DataFrame(
-            {"Месяц": [f"{m.month:02d}-{m.year}" for m in months], column: [0] * 12}
-        )
+        return empty_months_df(column)
 
     monthly_df = pd.DataFrame(monthly_points)
 

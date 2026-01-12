@@ -233,7 +233,9 @@ def send_hours_data_ws(df: DataFrame) -> None:
     )
 
 
-def send_lead_res_to_ws(leads_data: dict[str, DataFrame]) -> None:
+def send_lead_res_to_ws(
+    leads_data: dict[str, DataFrame], gip_df: DataFrame | None
+) -> None:
     """Отправляет итоги руководителей группы на лист итогов."""
     spreadsheet: Spreadsheet = sheets_manager.get_or_create_spreadsheet(
         BONUS_WS, format_bonus_spreadsheet
@@ -269,13 +271,44 @@ def send_lead_res_to_ws(leads_data: dict[str, DataFrame]) -> None:
         rows.append([""] * 13)
         current_row += 1
 
+    # --- добавляем ГИП внизу, если передали df ---
+    if gip_df is not None and not gip_df.empty:
+        rows.append(["ГИП"] + [""] * 12)
+        merge_rows.append(current_row)
+        current_row += 1
+
+        rows.append([""] + gip_df.columns.tolist())
+        current_row += 1
+
+        for idx, row in gip_df.iterrows():
+            rows.append([idx] + row.tolist())
+            current_row += 1
+
+        rows.append([""] * 13)
+        current_row += 1
+    # --- /ГИП ---
+
     # очистка диапазона
     ws.batch_clear(["A1:N200"])
     ws.unmerge_cells("A1:N200")
+    ws.format(
+        "A1:N200",
+        {
+            "backgroundColor": {"red": 1, "green": 1, "blue": 1},
+            "textFormat": {"bold": False},
+        },
+    )
 
     # отправка данных
     ws.update(rows, range_name="A1:N200")
 
-    # объединение ячеек под имена руководителей
+    # объединение ячеек под имена руководителей/ГИП
     for row_num in merge_rows:
         ws.merge_cells(f"A{row_num}:N{row_num}")
+        ws.format(
+            f"A{row_num}:H{row_num}",
+            {
+                "backgroundColor": {"red": 1, "green": 0.8, "blue": 0.8},
+                "textFormat": {"bold": True},
+            },
+        )

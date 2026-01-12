@@ -21,9 +21,15 @@ from src.salary_bonus.calculations.lead_results import process_lead_data
 from src.salary_bonus.calculations.project_archive.process import (
     process_project_archive_data,
 )
+from src.salary_bonus.calculations.results import do_results
+from src.salary_bonus.calculations.utils import find_sum_equipment
 from src.salary_bonus.logger import logging
 from src.salary_bonus.notification.telegram.bot import TelegramNotifier
-from src.salary_bonus.utils import get_employees, sum_points_by_month
+from src.salary_bonus.utils import (
+    get_employees,
+    get_project_archive_data,
+    sum_points_by_month,
+)
 from src.salary_bonus.worksheets.google_sheets_manager import sheets_manager
 from src.salary_bonus.worksheets.worksheets import send_month_data_to_spreadsheet
 
@@ -54,8 +60,9 @@ async def main() -> None:
             return
 
         # Расчет баллов по основным проектам для проектировщиков
+        main_archive_df = get_project_archive_data()
         archive_points, eng_data = await process_project_archive_data(
-            list_of_engineers, tg_bot
+            main_archive_df, list_of_engineers, tg_bot
         )
 
         # Рассчет баллов по дополнительным проектам для проектировщиков
@@ -63,31 +70,19 @@ async def main() -> None:
             list_of_engineers, tg_bot, eng_data
         )
 
+        # Суммируем результаты из двух источников и отправляем в таблицы
         month_res_data = sum_points_by_month(archive_points, add_data_points)
-        print(month_res_data)
-
         for engineer, df in month_res_data.items():
             send_month_data_to_spreadsheet(df, engineer)
 
-        # Рассчет баллов для руководителей
-        if len(list(employees_data["lead"].keys())) > 0:
-            process_lead_data(archive_points, employees_data["lead"])
-        else:
-            msg = "Для расчета баллов руководителей не найдено данных."
-            logging.warning(msg)
-            await tg_bot.send_message(msg)
+        # Считаем средние баллы и часы работы и отправляем на лист "Итоги"
+        sum_equipment = find_sum_equipment(main_archive_df)
+        do_results(month_res_data, sum_equipment)
 
-        gip = employees_data["chief"]
-        if len(gip) > 0:
-            # TODO: реализовать расчет баллов для ГИПов
-            ...
-        else:
-            msg = "Для расчета баллов ГИП не найдено данных."
-            logging.warning(msg)
-            await tg_bot.send_message(msg)
+        # Рассчет баллов для руководителей и гипа
+        process_lead_data(archive_points, employees_data["lead"], employees_data["chief"])
 
         await tg_bot.send_message("Расчет баллов окончен.")
-
     except Exception as error:
         logging.exception(error)
         error_name = type(error).__name__
