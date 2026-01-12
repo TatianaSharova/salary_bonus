@@ -1,10 +1,9 @@
-from datetime import datetime as dt
-
 import pandas as pd
 from pandas.core.frame import DataFrame
 from pandas.core.indexes.period import PeriodIndex
 from pandas.core.series import Series
 
+from src.salary_bonus.config.defaults import CURRENT_YEAR
 from src.salary_bonus.logger import logging
 
 pd.options.mode.chained_assignment = None
@@ -99,4 +98,4 @@ def calculate_quarter(df: DataFrame, colomn: str) -> DataFrame:
     result = quarterly_df.groupby("Квартал")[f"{colomn}"].sum().reset_index()
     result["Квартал"] = result["Квартал"].apply(lambda x: f"{x.quarter}-{x.year}")
 
-    return result[result["Квартал"].str.contains(f"{dt.now().year}")]
+    return result[result["Квартал"].str.contains(CURRENT_YEAR)]

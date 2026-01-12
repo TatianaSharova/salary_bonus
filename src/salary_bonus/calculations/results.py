@@ -1,10 +1,7 @@
-from datetime import datetime as dt
-
 import pandas as pd
 from pandas.core.frame import DataFrame
-from pandas.core.series import Series
 
-from src.salary_bonus.config.defaults import MONTHS
+from src.salary_bonus.config.defaults import CURRENT_MONTH, CURRENT_YEAR, MONTHS
 from src.salary_bonus.logger import logging
 from src.salary_bonus.worksheets.worksheets import (
     get_attendance_sheet_ws,
@@ -22,7 +19,7 @@ def count_average_points(res: dict) -> DataFrame:
     )
     merged_df = pd.concat(res.values(), ignore_index=True)
 
-    filtered_df = merged_df[merged_df["Месяц"].str.contains(f"{dt.now().year}")]
+    filtered_df = merged_df[merged_df["Месяц"].str.contains(CURRENT_YEAR)]
 
     average_df = filtered_df.groupby("Месяц").mean().reset_index()
     average_df["Баллы"] = average_df["Баллы"].apply(lambda x: int(x))
@@ -35,7 +32,7 @@ def count_average_points(res: dict) -> DataFrame:
 def get_working_hours_data(engineers: list[str]) -> DataFrame:
     """Собирает данные о рабочих часах проектировщиков."""
     logging.info("Сбор данных о рабочих часах проектировщиков.")
-    current_month = dt.now().month
+
     monthly_data = {}
     months_list = list(MONTHS.values())
     columns = ["Имя"] + months_list
@@ -43,7 +40,7 @@ def get_working_hours_data(engineers: list[str]) -> DataFrame:
 
     attendance_ws_all = get_attendance_sheet_ws()
 
-    for num in range(1, current_month + 1):
+    for num in range(1, CURRENT_MONTH + 1):
         for worksheet in attendance_ws_all:
             if worksheet.title == MONTHS[str(num)]:
                 raw_data = worksheet.get("A1:T160")
@@ -78,17 +75,16 @@ def do_results(results: dict, sum_equipment: DataFrame) -> None:
     """
     Отправляет данные о плане и премиальных баллах в таблицу.
     """
-    logging.info("Начинаем подсчет квартального плана и премиальных баллов.")
-
     # Подсчет и отправка средних баллов
     average_df = count_average_points(results)
     res_df = pd.merge(average_df, sum_equipment, on="Месяц", how="outer")
     res_df["Средний балл"] = res_df["Средний балл"].fillna(0)
-    res_df["Сумма заложенного оборудования"] = res_df["Сумма заложенного оборудования"].fillna(0)
+    res_df["Сумма заложенного оборудования"] = res_df[
+        "Сумма заложенного оборудования"
+    ].fillna(0)
     send_results_data_ws(res_df)
 
     # Сбор и отправка рабочих часов
     engineers = list(results.keys())
-    working_hours_per_quarter = get_working_hours_data(engineers)
-    send_hours_data_ws(working_hours_per_quarter)
-
+    working_hours = get_working_hours_data(engineers)
+    send_hours_data_ws(working_hours)

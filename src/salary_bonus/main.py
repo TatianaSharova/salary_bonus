@@ -21,10 +21,17 @@ from src.salary_bonus.calculations.lead_results import process_lead_data
 from src.salary_bonus.calculations.project_archive.process import (
     process_project_archive_data,
 )
+from src.salary_bonus.calculations.results import do_results
+from src.salary_bonus.calculations.utils import find_sum_equipment
 from src.salary_bonus.logger import logging
 from src.salary_bonus.notification.telegram.bot import TelegramNotifier
-from src.salary_bonus.utils import get_employees, get_project_archive_data
+from src.salary_bonus.utils import (
+    get_employees,
+    get_project_archive_data,
+    sum_points_by_month,
+)
 from src.salary_bonus.worksheets.google_sheets_manager import sheets_manager
+from src.salary_bonus.worksheets.worksheets import send_month_data_to_spreadsheet
 
 pd.options.mode.chained_assignment = None
 pd.set_option("future.no_silent_downcasting", True)
@@ -37,73 +44,43 @@ async def main() -> None:
     logging.info("Запущена основная задача.")
     tg_bot = TelegramNotifier()
 
-    df = get_project_archive_data()
-
-    if df is None:
-        await tg_bot.send_message(
-            'Ошибка: таблица "Таблица проектов" не найдена.\n'
-            "Возможно название было сменено.",
-        )
-        sheets_manager.invalidate()
-        await tg_bot.close()
-        return
-    elif isinstance(df, pd.DataFrame) and df.empty:
-        msg = "Таблица проектов пуста, расчет не будет произведен."
-        logging.warning(msg)
-        await tg_bot.send_message(msg)
-        sheets_manager.invalidate()
-        await tg_bot.close()
-        return
-
     try:
         employees_data = get_employees()
         list_of_engineers = employees_data["engineers"]
 
-        # Рассчет баллов по основным проектам для проектировщиков
-        if len(list_of_engineers) > 0:
-            archive_points = process_project_archive_data(list_of_engineers, df)
-        else:
+        if len(list_of_engineers) == 0:
             msg = (
                 "Нет данных о проектировщиках для расчета на листе 'Настройки'."
                 " Расчет не будет произведен."
             )
             logging.warning(
-                msg + f"\n\nПолученные данные с листа 'Настройки':\n {employees_data}"
+                msg + f'\n\nПолученные данные с листа "Настройки":\n {employees_data}'
             )
             await tg_bot.send_message(msg)
-            sheets_manager.invalidate()
-            await tg_bot.close()
             return
 
+        # Расчет баллов по основным проектам для проектировщиков
+        main_archive_df = get_project_archive_data()
+        archive_points, eng_data = await process_project_archive_data(
+            main_archive_df, list_of_engineers, tg_bot
+        )
+
         # Рассчет баллов по дополнительным проектам для проектировщиков
-        process_additional_work_data(archive_points, list_of_engineers, tg_bot)
-        # TODO
+        add_data_points = await process_additional_work_data(
+            list_of_engineers, tg_bot, eng_data
+        )
 
-        # Рассчет баллов для руководителей
-        if len(list(employees_data["lead"].keys())) > 0:
-            process_lead_data(archive_points, employees_data["lead"])
-        else:
-            msg = (
-                "Баллы проектировщиков посчитаны и отправлены на листы проектировщиков."
-                " Для расчета баллов руководителей не найдено данных."
-            )
-            logging.warning(msg)
-            await tg_bot.send_message(msg)
-            sheets_manager.invalidate()
-            await tg_bot.close()
+        # Суммируем результаты из двух источников и отправляем в таблицы
+        month_res_data = sum_points_by_month(archive_points, add_data_points)
+        for engineer, df in month_res_data.items():
+            send_month_data_to_spreadsheet(df, engineer)
 
-        gip = employees_data["chief"]
-        if len(gip) > 0:
-            ...
-        else:
-            msg = (
-                "Баллы для руководителей посчитаны и отправлены на листы руководителей. "
-                " Для расчета баллов главных инженеров не найдено данных."
-            )
-            logging.warning(msg)
-            await tg_bot.send_message(msg)
-            sheets_manager.invalidate()
-            await tg_bot.close()
+        # Считаем средние баллы и часы работы и отправляем на лист "Итоги"
+        sum_equipment = find_sum_equipment(main_archive_df)
+        do_results(month_res_data, sum_equipment)
+
+        # Рассчет баллов для руководителей и гипа
+        process_lead_data(archive_points, employees_data["lead"], employees_data["chief"])
 
         await tg_bot.send_message("Расчет баллов окончен.")
     except Exception as error:

@@ -1,17 +1,15 @@
-from datetime import datetime as dt
-
 import gspread
 from gspread.spreadsheet import Spreadsheet
 from gspread.worksheet import Worksheet
 from pandas.core.frame import DataFrame
 
 from src.salary_bonus.config.defaults import (
-    ADDITIONAL_WORK,
+    ADD_WORK_COL_NAMES,
     AFTER_FORMAT_SLEEP,
     ARCHIVE_CURRENT_WS,
     BONUS_WS,
+    CURRENT_YEAR,
     ENG_WS_COL_NAMES,
-    PROJECT_ARCHIVE,
     RESULT_WS,
     SETTINGS_WS,
 )
@@ -31,13 +29,13 @@ from src.salary_bonus.worksheets.utils import (
 gc = gspread.service_account(filename=CREDS_PATH)
 
 
-def create_new_ws_project_archive(spreadsheet: Spreadsheet) -> Worksheet:
+def create_new_ws_archive(spreadsheet: Spreadsheet) -> Worksheet:
     """
     Создает новый лист для архива проектов/доп. работ
     с таким же форматированием, как у листа прошлого года.
     """
-    logging.info(f"Создание нового листа {dt.now().year} в таблице проектов.")
-    source_sheet = spreadsheet.worksheet(f"{dt.now().year - 1}")
+    logging.info(f"Создание нового листа {CURRENT_YEAR} в таблице проектов.")
+    source_sheet = spreadsheet.worksheet(f"{int(CURRENT_YEAR) - 1}")
     source_sheet_title = source_sheet.title
 
     destination_spreadsheet_id = spreadsheet.id
@@ -45,7 +43,7 @@ def create_new_ws_project_archive(spreadsheet: Spreadsheet) -> Worksheet:
 
     new_sheet = spreadsheet.worksheet(f"{source_sheet_title} (копия)")
 
-    new_sheet.update_title(f"{dt.now().year}")
+    new_sheet.update_title(CURRENT_YEAR)
 
     total_rows = new_sheet.row_count
     total_cols = new_sheet.col_count
@@ -53,37 +51,22 @@ def create_new_ws_project_archive(spreadsheet: Spreadsheet) -> Worksheet:
     last_column_letter = get_column_letter(total_cols)
 
     new_sheet.batch_clear([f"A2:{last_column_letter}{total_rows}"])
-    logging.info(f"Лист {dt.now().year} создан.")
+    logging.info(f"Лист {CURRENT_YEAR} создан.")
 
     return new_sheet
 
 
-def connect_to_project_archive() -> Worksheet:
+def connect_to_archive(srpeadsheet_name: str) -> Worksheet:
     """
     Открывает лист с архивом проектов.
     При смене года создает новый лист.
     """
-    archive_spreadsheet: Spreadsheet = sheets_manager.get_spreadsheet(PROJECT_ARCHIVE)
+    archive_spreadsheet: Spreadsheet = sheets_manager.get_spreadsheet(srpeadsheet_name)
 
     ws = sheets_manager.get_worksheet(archive_spreadsheet, ARCHIVE_CURRENT_WS)
 
     if not ws:
-        ws = create_new_ws_project_archive(archive_spreadsheet)
-
-    return ws
-
-
-def connect_to_add_work_archive() -> Worksheet:
-    """
-    Открывает лист с архивом доп. работ.
-    При смене года создает новый лист.
-    """
-    archive_spreadsheet: Spreadsheet = sheets_manager.get_spreadsheet(ADDITIONAL_WORK)
-
-    ws = sheets_manager.get_worksheet(archive_spreadsheet, ARCHIVE_CURRENT_WS)
-
-    if not ws:
-        ws = create_new_ws_project_archive(archive_spreadsheet)
+        ws = create_new_ws_archive(archive_spreadsheet)
 
     return ws
 
@@ -99,33 +82,32 @@ def connect_to_settings_ws() -> Worksheet:
     return ws
 
 
-def connect_to_engineer_ws(engineer: str) -> Worksheet | None:
+def connect_to_engineer_ws(
+    engineer: str, create_if_not_exist: bool = True
+) -> Worksheet | None:
     """
     Открывает лист проектировщика.
-    Если лист не найден, возвращает None.
+
+    Args:
+        engineer (str): Имя проектировщика (название листа)
+        create_if_not_exist (bool): Создавать лист, если его нет
+
+    Returns:
+        Worksheet | None: Лист проектировщика или None, если лист не найден
     """
     spreadsheet: Spreadsheet = sheets_manager.get_or_create_spreadsheet(
         BONUS_WS, format_bonus_spreadsheet
     )
-    engineer_ws = sheets_manager.get_worksheet(spreadsheet, engineer)
 
-    return engineer_ws
-
-
-def connect_to_engineer_ws_or_create(engineer: str) -> Worksheet:
-    """
-    Открывает лист проектировщика.
-    Если лист не найден, создает его.
-    """
-    spreadsheet: Spreadsheet = sheets_manager.get_or_create_spreadsheet(
-        BONUS_WS, format_bonus_spreadsheet
-    )
-    engineer_ws = sheets_manager.get_or_create_worksheet(
-        spreadsheet,
-        engineer,
-        formatter=format_new_engineer_ws,
-        sleep_after=AFTER_FORMAT_SLEEP,
-    )
+    if not create_if_not_exist:
+        engineer_ws = sheets_manager.get_worksheet(spreadsheet, engineer)
+    else:
+        engineer_ws = sheets_manager.get_or_create_worksheet(
+            spreadsheet,
+            engineer,
+            formatter=format_new_engineer_ws,
+            sleep_after=AFTER_FORMAT_SLEEP,
+        )
 
     return engineer_ws
 
@@ -144,9 +126,20 @@ def send_project_data_to_spreadsheet(df: DataFrame, engineer: str) -> None:
     Отправляет данные с баллами в таблицу "Премирование".
     """
     logging.info("Отправка данных о проектах на лист проектировщика.")
-    sheet = connect_to_engineer_ws_or_create(engineer)
+    sheet = connect_to_engineer_ws(engineer)
 
     eng_small = df[ENG_WS_COL_NAMES]
+
+    # Очистка
+    sheet.batch_clear(["A2:I200"])
+    # Удаление форматирования
+    sheet.format(
+        "A2:I200",
+        {
+            "backgroundColor": {"red": 1, "green": 1, "blue": 1},
+            "textFormat": {"bold": False},
+        },
+    )
 
     sheet.update([eng_small.columns.values.tolist()] + eng_small.values.tolist())
 
@@ -154,19 +147,54 @@ def send_project_data_to_spreadsheet(df: DataFrame, engineer: str) -> None:
     color_comp_correction(df, sheet)
 
 
+def send_add_work_data_to_spreadsheet(
+    df: DataFrame, engineer: str, archive_data: dict[str, DataFrame]
+) -> None:
+    """
+    Отправляет данные с баллами за доп. работы в таблицу "Премирование".
+    """
+    logging.info("Отправка данных о доп. работах на лист проектировщика.")
+    sheet = connect_to_engineer_ws(engineer)
+
+    eng_small = df[ADD_WORK_COL_NAMES]
+
+    if engineer in archive_data:
+        main_projects_length = len(archive_data[engineer])
+        start_row = main_projects_length + 4
+        sheet.update(
+            [eng_small.columns.values.tolist()] + eng_small.values.tolist(),
+            range_name=f"A{start_row}:H200",
+        )
+        sheet.format(
+            f"A{start_row}:H{start_row}",
+            {
+                "backgroundColor": {"red": 1.0, "green": 0.85, "blue": 0.6},
+                "textFormat": {"bold": True},
+            },
+        )
+        start_row += 1
+    else:
+        start_row = 1
+        sheet.update([eng_small.columns.values.tolist()] + eng_small.values.tolist())
+
+    color_overdue_deadline(eng_small, sheet, start_row)
+
+
 def send_month_data_to_spreadsheet(df: DataFrame, engineer: str) -> None:
     """
-    Отсылает данные о баллах, заработанных в каждом квартале
+    Отсылает данные о баллах, заработанных в каждом месяце
     в таблицу "Премирование".
     """
-    logging.info("Отправка данных о баллах по месяцам на лист проектировщика.")
-    sheet = connect_to_engineer_ws_or_create(engineer)
+    logging.info(
+        f"Отправка данных о баллах по месяцам на лист проектировщика {engineer}."
+    )
+    sheet = connect_to_engineer_ws(engineer)
 
     sheet.update([df.columns.values.tolist()] + df.values.tolist(), range_name="L1:M13")
 
 
 def send_results_data_ws(df: DataFrame) -> None:
-    """Отправляет данные о средних баллах на лист "Настройки"."""
+    """Отправляет данные о средних баллах на лист "Итоги"."""
     spreadsheet: Spreadsheet = sheets_manager.get_or_create_spreadsheet(
         BONUS_WS, format_bonus_spreadsheet
     )
@@ -179,24 +207,14 @@ def send_results_data_ws(df: DataFrame) -> None:
         sleep_after=AFTER_FORMAT_SLEEP,
     )
 
-    logging.info('Отправка данных о средних баллах на лист "Настройки".')
+    logging.info('Отправка данных о средних баллах на лист "Итоги".')
     result_ws.update(
         [df.columns.values.tolist()] + df.values.tolist(), range_name="P1:R15"
     )
 
 
-def send_bonus_data_ws(engineer: str, df: DataFrame) -> None:
-    """Отправляет данные о выполнении плана на лист проектировщика."""
-    worksheet = connect_to_engineer_ws_or_create(engineer)
-
-    logging.info(f"Отправка данных о выполнении плана проектировщика {engineer}.")
-    worksheet.update(
-        [df.columns.values.tolist()] + df.values.tolist(), range_name="N1:Q30"
-    )
-
-
 def send_hours_data_ws(df: DataFrame) -> None:
-    """Отправляет данные о рабочих часах на лист настроек."""
+    """Отправляет данные о рабочих часах на лист итогов."""
     spreadsheet: Spreadsheet = sheets_manager.get_or_create_spreadsheet(
         BONUS_WS, format_bonus_spreadsheet
     )
@@ -215,8 +233,10 @@ def send_hours_data_ws(df: DataFrame) -> None:
     )
 
 
-def send_lead_res_to_ws(leads_data: dict[str, DataFrame]) -> None:
-    """Отправляет итоги руководителей группы га лист итогов."""
+def send_lead_res_to_ws(
+    leads_data: dict[str, DataFrame], gip_df: DataFrame | None
+) -> None:
+    """Отправляет итоги руководителей группы на лист итогов."""
     spreadsheet: Spreadsheet = sheets_manager.get_or_create_spreadsheet(
         BONUS_WS, format_bonus_spreadsheet
     )
@@ -230,7 +250,7 @@ def send_lead_res_to_ws(leads_data: dict[str, DataFrame]) -> None:
     rows = []
     merge_rows: list[int] = []
 
-    current_row = 1  # считаем строки, начиная с 1 (Google Sheets)
+    current_row = 1  # считаем строки, начиная с 1
 
     for lead_name, df in leads_data.items():
         # строка с именем руководителя
@@ -251,13 +271,44 @@ def send_lead_res_to_ws(leads_data: dict[str, DataFrame]) -> None:
         rows.append([""] * 13)
         current_row += 1
 
+    # --- добавляем ГИП внизу, если передали df ---
+    if gip_df is not None and not gip_df.empty:
+        rows.append(["ГИП"] + [""] * 12)
+        merge_rows.append(current_row)
+        current_row += 1
+
+        rows.append([""] + gip_df.columns.tolist())
+        current_row += 1
+
+        for idx, row in gip_df.iterrows():
+            rows.append([idx] + row.tolist())
+            current_row += 1
+
+        rows.append([""] * 13)
+        current_row += 1
+    # --- /ГИП ---
+
     # очистка диапазона
     ws.batch_clear(["A1:N200"])
     ws.unmerge_cells("A1:N200")
+    ws.format(
+        "A1:N200",
+        {
+            "backgroundColor": {"red": 1, "green": 1, "blue": 1},
+            "textFormat": {"bold": False},
+        },
+    )
 
     # отправка данных
     ws.update(rows, range_name="A1:N200")
 
-    # объединение ячеек под имена руководителей
+    # объединение ячеек под имена руководителей/ГИП
     for row_num in merge_rows:
         ws.merge_cells(f"A{row_num}:N{row_num}")
+        ws.format(
+            f"A{row_num}:H{row_num}",
+            {
+                "backgroundColor": {"red": 1, "green": 0.8, "blue": 0.8},
+                "textFormat": {"bold": True},
+            },
+        )

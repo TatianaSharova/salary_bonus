@@ -25,11 +25,14 @@ def get_column_letter(n: int) -> str:
     return string
 
 
-def color_overdue_deadline(df: DataFrame, sheet: Worksheet) -> None:
+def color_overdue_deadline(df: DataFrame, sheet: Worksheet, start_row: int = 2) -> None:
     """Окрашивает ячейки с просроченным дедлайном."""
     logging.info('Окраска ячеек в столбце "Дедлайн" с просроченным дедлайном.')
+
+    last_row = start_row + len(df)
+
     sheet.format(
-        "H2:H200",
+        f"H{start_row}:H{last_row}",
         {
             "backgroundColor": {"red": 1, "green": 1, "blue": 1},
         },
@@ -67,8 +70,10 @@ def color_comp_correction(df: DataFrame, sheet: Worksheet) -> None:
         "Окраска ячеек с учтенной коррекцией сложности "
         'в столбце "Корректировка сложности".'
     )
+
+    last_row = len(df) + 1
     sheet.format(
-        "J2:J200",
+        f"J2:J{last_row}",
         {
             "backgroundColor": {"red": 1, "green": 1, "blue": 1},
         },
@@ -94,7 +99,6 @@ def format_new_engineer_ws(sheet: Worksheet) -> None:
         sheet, [("A", 100), ("B", 400), ("C", 200), ("D:G", 150), ("I:J", 150)]
     )
     sheet.update([["Корректировка сложности"]], "J1")
-    sheet.update([["Отпуск/отгул/не работал(а) (в часах)"]], "Q1")
     sheet.format(
         "A1:J1",
         {
@@ -140,7 +144,7 @@ def format_settings_ws(sheet: Worksheet) -> None:
             "textFormat": {"fontSize": 12},
         },
     )
-    set_column_widths(sheet, [("A", 300), ("B", 300), ("C", 300)])
+    set_column_widths(sheet, [("A", 200), ("B", 200), ("C", 200)])
 
 
 def format_new_result_ws(sheet: Worksheet) -> None:
