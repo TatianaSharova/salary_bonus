@@ -25,7 +25,3 @@ test.py
 
 # google
 creds.json
-
-# cline
-.clinerules
-.clineignore
