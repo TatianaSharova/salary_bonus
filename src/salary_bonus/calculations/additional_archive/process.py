@@ -19,11 +19,24 @@ from src.salary_bonus.worksheets.worksheets import send_add_work_data_to_spreads
 async def process_additional_work_data(
     engineers: list[str],
     tg_bot: aiogram.Bot,
-    archive_points: dict[str, pd.DataFrame] = None,
+    eng_main_arch_data: dict[str, pd.DataFrame],
 ) -> dict[str, pd.DataFrame]:
     """
     Собирает данные по дополнительным проектам из архива расчетов
-    и производит расчет баллов для проектировщиков.
+    и производит расчет баллов по ним для проектировщиков.
+
+    Args:
+        engineers (list[str]): Список проектировщиков, для которых
+            необходимо произвести расчет баллов.
+        tg_bot (aiogram.Bot): Экземпляр бота для отправки уведомлений.
+        eng_main_arch_data (dict[str, pd.DataFrame] | None): Данные
+            по основным проектам проектировщиков из архива проектов.
+            Используется для отправки на лист проектировщика.
+
+    Returns:
+        dict[str, pd.DataFrame]: Словарь с данными по баллам, где key -
+        проектировщик, value - DataFrame вида:
+        | Месяц (pandas.Period("YYYY-MM", freq="M")) | Баллы (float) |.
     """
     results = {}
 
@@ -68,7 +81,7 @@ async def process_additional_work_data(
                 f"Переходим к следующему проектировщику через 10 секунд."
             )
 
-        send_add_work_data_to_spreadsheet(engineer_projects, engineer, archive_points)
+        send_add_work_data_to_spreadsheet(engineer_projects, engineer, eng_main_arch_data)
         time.sleep(AFTER_ENG_SLEEP)
 
     return results

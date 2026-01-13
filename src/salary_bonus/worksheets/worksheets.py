@@ -140,6 +140,15 @@ def send_project_data_to_spreadsheet(df: DataFrame, engineer: str) -> None:
             "textFormat": {"bold": False},
         },
     )
+    # Форматирование заголовка
+    sheet.update([["Корректировка сложности"]], "J1")
+    sheet.format(
+        "A1:J1",
+        {
+            "backgroundColor": {"red": 0.7, "green": 1.0, "blue": 0.7},
+            "textFormat": {"bold": True},
+        },
+    )
 
     sheet.update([eng_small.columns.values.tolist()] + eng_small.values.tolist())
 
@@ -174,8 +183,23 @@ def send_add_work_data_to_spreadsheet(
         )
         start_row += 1
     else:
-        start_row = 1
+        sheet.format(
+            "A1:H1",
+            {
+                "backgroundColor": {"red": 1.0, "green": 0.85, "blue": 0.6},
+                "textFormat": {"bold": True},
+            },
+        )
+        sheet.format(
+            "I1:J1",
+            {
+                "backgroundColor": {"red": 1.0, "green": 1, "blue": 1},
+                "textFormat": {"bold": False},
+            },
+        )
+        sheet.batch_clear(["I1:J1"])
         sheet.update([eng_small.columns.values.tolist()] + eng_small.values.tolist())
+        start_row = 2
 
     color_overdue_deadline(eng_small, sheet, start_row)
 

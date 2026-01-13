@@ -47,6 +47,7 @@ async def main() -> None:
     try:
         employees_data = get_employees()
         list_of_engineers = employees_data["engineers"]
+        # list_of_engineers = ["Цуканов"]
 
         if len(list_of_engineers) == 0:
             msg = (

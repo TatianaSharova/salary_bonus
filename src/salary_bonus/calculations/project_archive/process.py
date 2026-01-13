@@ -31,7 +31,12 @@ def correct_complexity(engineer: str, engineer_projects: DataFrame) -> DataFrame
 
     if worksheet:
         raw_data = worksheet.get("J1:J200")
-        new_coplexity = pd.DataFrame(raw_data[1:], columns=raw_data[0])
+
+        try:
+            new_coplexity = pd.DataFrame(raw_data[1:], columns=raw_data[0])
+        except ValueError:
+            new_coplexity = pd.DataFrame(columns=["Корректировка сложности"])
+
         if not new_coplexity.empty:
             engineer_projects["Корректировка сложности"] = new_coplexity[
                 "Корректировка сложности"
