@@ -34,7 +34,7 @@ def count_add_points(row: pd.Series, df: pd.DataFrame) -> int | str:
         points += check_gr(row)
         points += 1.5
     if "ГР Централизованная установка" in work_types:
-        points += check_gr_center(row)  # TODO: check how to count
+        points += check_gr_center(row)
 
     points = check_spend_time(row, points, df, amount=0, archive_sh=False)
 
