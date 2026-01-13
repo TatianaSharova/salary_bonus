@@ -60,21 +60,12 @@ def get_working_hours_data(engineers: list[str]) -> DataFrame:
 
     df.iloc[:, 1:] = df.iloc[:, 1:].apply(pd.to_numeric, errors="coerce")
 
-    max_values = df.iloc[:, 1:].max(skipna=True)
-    row_with_plan = pd.DataFrame(
-        [["Рабочий план (часы)"] + max_values.tolist()], columns=df.columns
-    )
-    df_work = pd.concat([df, row_with_plan], ignore_index=True)
-
-    df_work_without_nan = df_work.fillna(0)
+    df_work_without_nan = df.fillna(0)
 
     return df_work_without_nan
 
 
 def do_results(results: dict, sum_equipment: DataFrame) -> None:
-    """
-    Отправляет данные о плане и премиальных баллах в таблицу.
-    """
     # Подсчет и отправка средних баллов
     average_df = count_average_points(results)
     res_df = pd.merge(average_df, sum_equipment, on="Месяц", how="outer")

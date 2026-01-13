@@ -38,13 +38,14 @@ def color_overdue_deadline(df: DataFrame, sheet: Worksheet, start_row: int = 2) 
         },
     )
     for index, row in df.iterrows():
+        sheet_row = start_row + index
         try:
             end_date = dt.strptime(row["Дата окончания проекта"], "%d.%m.%Y").date()
             deadline = dt.strptime(row["Дедлайн"], "%d.%m.%Y").date()
 
             if deadline < end_date:
                 sheet.format(
-                    f"H{index + 2}",
+                    f"H{sheet_row}",
                     {
                         "backgroundColor": {"red": 1, "green": 0.8, "blue": 0.8},
                     },
@@ -55,7 +56,7 @@ def color_overdue_deadline(df: DataFrame, sheet: Worksheet, start_row: int = 2) 
 
                 if deadline < dt.now().date():
                     sheet.format(
-                        f"H{index + 2}",
+                        f"H{sheet_row}",
                         {
                             "backgroundColor": {"red": 1, "green": 0.8, "blue": 0.8},
                         },
@@ -97,14 +98,6 @@ def format_new_engineer_ws(sheet: Worksheet) -> None:
     """Форматирует новый лист для инженера."""
     set_column_widths(
         sheet, [("A", 100), ("B", 400), ("C", 200), ("D:G", 150), ("I:J", 150)]
-    )
-    sheet.update([["Корректировка сложности"]], "J1")
-    sheet.format(
-        "A1:J1",
-        {
-            "backgroundColor": {"red": 0.7, "green": 1.0, "blue": 0.7},
-            "textFormat": {"bold": True},
-        },
     )
     sheet.format(
         "A1:T200",

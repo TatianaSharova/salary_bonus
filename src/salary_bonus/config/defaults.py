@@ -1,7 +1,6 @@
 from datetime import datetime as dt
 
 CURRENT_YEAR = str(dt.now().year)
-# CURRENT_YEAR = "2025"  # TODO del
 CURRENT_MONTH = dt.now().month
 MONTHS = {
     "1": f"Январь {CURRENT_YEAR}",
@@ -51,7 +50,7 @@ AFTER_ENG_SLEEP = 10
 PROJECT_ARCHIVE = "Таблица проектов"
 ADDITIONAL_WORK = "Таблица доп. работ"
 SETTINGS_WS = "Настройки"
-BONUS_WS = f"Премирование{CURRENT_YEAR}"  # TODO rename to normal
+BONUS_WS = f"Премирование{CURRENT_YEAR}"
 ARCHIVE_CURRENT_WS = CURRENT_YEAR
 FIRST_SHEET = "Sheet1"
 RESULT_WS = "Итоги"
