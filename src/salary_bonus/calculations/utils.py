@@ -7,6 +7,17 @@ from src.salary_bonus.logger import logging
 def find_sum_equipment(df: pd.DataFrame) -> pd.DataFrame:
     """
     Считает сумму заложенного оборудования по кварталам.
+
+    Args:
+        df (pd.DataFrame): датафрейм с архива проектов.
+
+    Returns:
+        Структура итогового DataFrame:
+        - "Месяц": str
+            Месяц в формате "MM-YYYY"
+        - Сумма заложенного оборудования (str): float
+            Суммарное значение за месяц
+
     """
     logging.info("Начинаем подсчет суммы заложенного оборудования по кварталам.")
     name = "Сумма заложенного оборудования"

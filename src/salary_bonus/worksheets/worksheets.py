@@ -233,7 +233,7 @@ def send_results_data_ws(df: DataFrame) -> None:
 
     logging.info('Отправка данных о средних баллах на лист "Итоги".')
     result_ws.update(
-        [df.columns.values.tolist()] + df.values.tolist(), range_name="P1:R15"
+        [df.columns.values.tolist()] + df.values.tolist(), range_name="P1:Q15"
     )
 
 
@@ -253,7 +253,7 @@ def send_hours_data_ws(df: DataFrame) -> None:
 
     logging.info('Отправка данных о рабочих часах на лист "Итоги".')
     result_ws.update(
-        [df.columns.values.tolist()] + df.values.tolist(), range_name="T1:AF30"
+        [df.columns.values.tolist()] + df.values.tolist(), range_name="S1:AE30"
     )
 
 

@@ -15,7 +15,7 @@ def count_average_points(res: dict) -> DataFrame:
     Считает среднее арифметическое количество набранных баллов в кварталах.
     """
     logging.info(
-        "Расчет среднего арифметического количества " "набранных баллов по кварталам."
+        "Расчет среднего арифметического количества набранных баллов по кварталам."
     )
     merged_df = pd.concat(res.values(), ignore_index=True)
 
@@ -67,13 +67,13 @@ def get_working_hours_data(engineers: list[str]) -> DataFrame:
 
 def do_results(results: dict, sum_equipment: DataFrame) -> None:
     # Подсчет и отправка средних баллов
-    average_df = count_average_points(results)
-    res_df = pd.merge(average_df, sum_equipment, on="Месяц", how="outer")
-    res_df["Средний балл"] = res_df["Средний балл"].fillna(0)
-    res_df["Сумма заложенного оборудования"] = res_df[
+    # average_df = count_average_points(results)
+    # res_df = pd.merge(average_df, sum_equipment, on="Месяц", how="outer")
+    # res_df["Средний балл"] = res_df["Средний балл"].fillna(0)
+    sum_equipment["Сумма заложенного оборудования"] = sum_equipment[
         "Сумма заложенного оборудования"
     ].fillna(0)
-    send_results_data_ws(res_df)
+    send_results_data_ws(sum_equipment)
 
     # Сбор и отправка рабочих часов
     engineers = list(results.keys())

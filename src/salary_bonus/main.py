@@ -76,14 +76,14 @@ async def main() -> None:
         for engineer, df in month_res_data.items():
             send_month_data_to_spreadsheet(df, engineer)
 
-        # Считаем средние баллы и часы работы и отправляем на лист "Итоги"
+        # Считаем сумму залож. оборудования и часы работы и отправляем на лист "Итоги"
         sum_equipment = find_sum_equipment(main_archive_df)
         do_results(month_res_data, sum_equipment)
 
         # Рассчет баллов для руководителей и гипа
-        process_lead_data(archive_points, employees_data["lead"], employees_data["chief"])
+        process_lead_data(month_res_data, employees_data["lead"], employees_data["chief"])
 
-        await tg_bot.send_message("Расчет баллов окончен.")
+        await tg_bot.send_message("Расчет баллов успешно закончен.")
     except Exception as error:
         logging.exception(error)
         error_name = type(error).__name__

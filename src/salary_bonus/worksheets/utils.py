@@ -153,14 +153,14 @@ def format_new_result_ws(sheet: Worksheet) -> None:
     )
 
     sheet.format(
-        ["P1:R1", "T1:AF1"],
+        ["P1:Q1", "S1:AE1"],
         {
             "backgroundColor": {"red": 1, "green": 0.8, "blue": 0.8},
             "textFormat": {"fontSize": 12},
         },
     )
 
-    set_column_widths(sheet, [("R", 300)])
+    set_column_widths(sheet, [("Q", 300)])
 
 
 def format_bonus_spreadsheet(spreadsheet: Spreadsheet) -> None:
